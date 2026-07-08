@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "C:\\Users\\Ing.Str 01\\Desktop\\Claudia 2.0\\Menu digital restas\\dev-frontend.cmd"],
+      "port": 5173
+    }
+  ]
+}

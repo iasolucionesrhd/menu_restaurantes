@@ -1,0 +1,60 @@
+from decimal import Decimal
+
+from pydantic import BaseModel, field_validator
+
+from app.enums import EstadoPedido, MetodoPago
+
+
+class ClienteCreate(BaseModel):
+    nombre: str
+    correo: str | None = None
+    telefono: str | None = None
+    consentimiento_datos: bool = True
+
+
+class ItemPedidoCreate(BaseModel):
+    item_id: int
+    cantidad: int
+    notas: str | None = None
+
+    @field_validator("cantidad")
+    @classmethod
+    def cantidad_positiva(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("La cantidad debe ser mayor a cero")
+        return v
+
+
+class PedidoCreateRequest(BaseModel):
+    mesa_codigo_qr: str | None = None
+    cliente: ClienteCreate
+    metodo_pago: MetodoPago
+    items: list[ItemPedidoCreate]
+    payment_intent_id: str | None = None
+
+
+class ItemPedidoOut(BaseModel):
+    id: int
+    item_id: int
+    nombre: str
+    cantidad: int
+    precio_unitario: Decimal
+    notas: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class PedidoOut(BaseModel):
+    id: int
+    estado: EstadoPedido
+    metodo_pago: MetodoPago
+    monto_total: Decimal
+    tipo_entrega: str
+    mesa_numero: int | None
+    cliente_nombre: str
+    tilopay_transaction_id: str | None
+    items: list[ItemPedidoOut]
+
+
+class ActualizarEstadoRequest(BaseModel):
+    estado: EstadoPedido
