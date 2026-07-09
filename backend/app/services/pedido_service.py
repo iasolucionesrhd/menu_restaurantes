@@ -124,7 +124,6 @@ async def transicionar_estado(db: AsyncSession, pedido: Pedido, nuevo_estado: Es
         )
     pedido.estado = nuevo_estado
     await db.commit()
-    await db.refresh(pedido)
     return pedido
 
 
