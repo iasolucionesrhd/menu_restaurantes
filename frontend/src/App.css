@@ -316,6 +316,25 @@ input {
   padding-left: 18px;
 }
 
+.pago-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+
+.pago-badge-efectivo {
+  background: #fff3cd;
+  color: #7a5b00;
+}
+
+.pago-badge-pagado {
+  background: #d4edda;
+  color: #155724;
+}
+
 .ws-banner {
   text-align: center;
   padding: 6px;
