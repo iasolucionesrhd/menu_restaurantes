@@ -17,14 +17,17 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-rol_usuario = sa.Enum("admin", "cocina", name="rol_usuario")
+# create_type=False: la creación/eliminación del tipo se maneja a mano más
+# abajo (bind.create()/drop()) para evitar que Alembic intente crearlo de
+# nuevo implícitamente al usarlo como tipo de columna en create_table.
+rol_usuario = sa.Enum("admin", "cocina", name="rol_usuario", create_type=False)
 estado_pedido = sa.Enum(
-    "recibido", "en_cocina", "listo", "entregado", "cancelado", name="estado_pedido"
+    "recibido", "en_cocina", "listo", "entregado", "cancelado", name="estado_pedido", create_type=False
 )
 metodo_pago = sa.Enum(
-    "tarjeta", "sinpe", "apple_pay", "efectivo_en_restaurante", name="metodo_pago"
+    "tarjeta", "sinpe", "apple_pay", "efectivo_en_restaurante", name="metodo_pago", create_type=False
 )
-tipo_entrega = sa.Enum("mesa", "retiro", name="tipo_entrega")
+tipo_entrega = sa.Enum("mesa", "retiro", name="tipo_entrega", create_type=False)
 
 
 def upgrade() -> None:
