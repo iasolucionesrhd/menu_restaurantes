@@ -17,26 +17,20 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# create_type=False: la creación/eliminación del tipo se maneja a mano más
-# abajo (bind.create()/drop()) para evitar que Alembic intente crearlo de
-# nuevo implícitamente al usarlo como tipo de columna en create_table.
-rol_usuario = sa.Enum("admin", "cocina", name="rol_usuario", create_type=False)
+# Cada uno de estos tipos se referencia como columna en una sola tabla más
+# abajo, así que Alembic/SQLAlchemy lo crea automáticamente (una sola vez)
+# al crear esa tabla — no hace falta (ni conviene) crearlo a mano aparte.
+rol_usuario = sa.Enum("admin", "cocina", name="rol_usuario")
 estado_pedido = sa.Enum(
-    "recibido", "en_cocina", "listo", "entregado", "cancelado", name="estado_pedido", create_type=False
+    "recibido", "en_cocina", "listo", "entregado", "cancelado", name="estado_pedido"
 )
 metodo_pago = sa.Enum(
-    "tarjeta", "sinpe", "apple_pay", "efectivo_en_restaurante", name="metodo_pago", create_type=False
+    "tarjeta", "sinpe", "apple_pay", "efectivo_en_restaurante", name="metodo_pago"
 )
-tipo_entrega = sa.Enum("mesa", "retiro", name="tipo_entrega", create_type=False)
+tipo_entrega = sa.Enum("mesa", "retiro", name="tipo_entrega")
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    rol_usuario.create(bind, checkfirst=True)
-    estado_pedido.create(bind, checkfirst=True)
-    metodo_pago.create(bind, checkfirst=True)
-    tipo_entrega.create(bind, checkfirst=True)
-
     op.create_table(
         "restaurante",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -156,9 +150,3 @@ def downgrade() -> None:
     op.drop_table("mesa")
     op.drop_table("usuario")
     op.drop_table("restaurante")
-
-    bind = op.get_bind()
-    tipo_entrega.drop(bind, checkfirst=True)
-    metodo_pago.drop(bind, checkfirst=True)
-    estado_pedido.drop(bind, checkfirst=True)
-    rol_usuario.drop(bind, checkfirst=True)
