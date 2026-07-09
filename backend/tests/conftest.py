@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app import models  # noqa: F401  (populates Base.metadata)
 from app.config import settings
@@ -20,7 +21,11 @@ from app.security import hash_password
 
 TEST_DATABASE_URL = re.sub(r"/[^/]+$", "/menu_test", settings.DATABASE_URL)
 
-test_engine = create_async_engine(TEST_DATABASE_URL)
+# NullPool: cada checkout abre una conexión asyncpg nueva y la cierra al
+# terminar. Necesario porque las fixtures de sesión y de función corren en
+# event loops distintos, y una conexión asyncpg no puede reutilizarse entre
+# loops diferentes (causa "another operation is in progress").
+test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(test_engine, expire_on_commit=False)
 
 
