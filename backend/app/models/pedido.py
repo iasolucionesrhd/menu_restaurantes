@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -28,6 +28,17 @@ class Pedido(Base):
     tipo_entrega: Mapped[TipoEntrega] = mapped_column(
         Enum(TipoEntrega, name="tipo_entrega", native_enum=True, values_callable=lambda obj: [e.value for e in obj])
     )
+
+    # Snapshot inmutable de los datos de facturación al momento del pedido
+    # (igual que precio_unitario en ItemPedido) — necesario incluso para
+    # invitados, cuya fila Cliente nunca se vuelve a leer.
+    requiere_factura: Mapped[bool] = mapped_column(Boolean, default=False)
+    factura_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    factura_cedula: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    factura_correo: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    factura_telefono: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    factura_direccion: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    factura_actividad_economica: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     actualizado_en: Mapped[datetime] = mapped_column(

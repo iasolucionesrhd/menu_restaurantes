@@ -5,11 +5,30 @@ from pydantic import BaseModel, field_validator
 from app.enums import EstadoPedido, MetodoPago
 
 
+class DatosFacturacion(BaseModel):
+    nombre: str
+    cedula: str
+    correo: str | None = None
+    telefono: str | None = None
+    direccion: str
+    actividad_economica: str | None = None
+
+    @field_validator("nombre", "cedula", "direccion")
+    @classmethod
+    def no_vacio(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Este campo no puede estar vacío")
+        return v
+
+
 class ClienteCreate(BaseModel):
     nombre: str
     correo: str | None = None
     telefono: str | None = None
     consentimiento_datos: bool = True
+    consentimiento_marketing: bool = False
+    google_id_token: str | None = None
+    datos_facturacion: DatosFacturacion | None = None
 
 
 class ItemPedidoCreate(BaseModel):
@@ -53,6 +72,13 @@ class PedidoOut(BaseModel):
     mesa_numero: int | None
     cliente_nombre: str
     tilopay_transaction_id: str | None
+    requiere_factura: bool
+    factura_nombre: str | None
+    factura_cedula: str | None
+    factura_correo: str | None
+    factura_telefono: str | None
+    factura_direccion: str | None
+    factura_actividad_economica: str | None
     items: list[ItemPedidoOut]
 
 

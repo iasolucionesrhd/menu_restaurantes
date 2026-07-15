@@ -59,6 +59,16 @@ Cuando haya credenciales sandbox de Tilopay:
 2. Cambiar `PAYMENT_MODE=tilopay` en `.env`.
 3. Completar los `TODO` marcados en `backend/app/services/payments/tilopay_adapter.py` con los endpoints reales de la API de Tilopay.
 
+## Sign-In con Google (opcional)
+
+El checkout público puede ofrecer "Iniciar sesión con Google" para pre-llenar nombre/correo y reconocer clientes recurrentes. Es opcional: si no se configura, el checkout como invitado funciona exactamente igual que antes.
+
+Un solo Client ID de Google OAuth para toda la plataforma (no uno por restaurante). La identidad de Google nunca se mezcla entre restaurantes: cada tenant obtiene su propia fila `Cliente`, aunque sea la misma cuenta de Google.
+
+1. Crear un Client ID tipo "Web application" en [Google Cloud Console](https://console.cloud.google.com/apis/credentials), con `http://localhost:5173` en orígenes autorizados (agregar el dominio real en producción).
+2. Poner el mismo valor en `GOOGLE_CLIENT_ID` (`.env`) y `VITE_GOOGLE_CLIENT_ID` (`frontend/.env`).
+3. Reiniciar `docker-compose`.
+
 ## Tests del backend
 
 Con los servicios levantados:

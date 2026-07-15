@@ -27,7 +27,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     let detail = response.statusText;
     try {
       const body = await response.json();
-      detail = body.detail ?? detail;
+      if (Array.isArray(body.detail)) {
+        // Forma por defecto de un 422 de FastAPI: lista de {loc, msg}, no un string.
+        detail = body.detail.map((e: { loc?: unknown[]; msg?: string }) => e.msg ?? JSON.stringify(e)).join(", ");
+      } else {
+        detail = body.detail ?? detail;
+      }
     } catch {
       // sin cuerpo JSON
     }

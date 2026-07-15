@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     FRONTEND_BASE_URL: str = "http://localhost:5173"
 
+    # Client ID público de Google OAuth (no es secreto, es seguro dejarlo sin
+    # configurar: el Sign-In con Google simplemente no se activa en ese caso).
+    GOOGLE_CLIENT_ID: str | None = None
+
     SEED_ADMIN_PASSWORD: str = "devpassword123"
 
 

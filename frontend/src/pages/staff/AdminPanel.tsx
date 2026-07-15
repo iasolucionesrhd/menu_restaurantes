@@ -121,7 +121,20 @@ function ItemsTab() {
           {items.map((item) => (
             <tr key={item.id}>
               <td>{item.nombre}</td>
-              <td>{item.precio}</td>
+              <td>
+                <input
+                  className="admin-precio-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={item.precio}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== item.precio) {
+                      adminApi.updateItem(item.id, { precio: e.target.value }).then(cargar);
+                    }
+                  }}
+                />
+              </td>
               <td>
                 <input
                   type="checkbox"

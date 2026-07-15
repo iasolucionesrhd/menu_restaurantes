@@ -384,3 +384,10 @@ input {
   border-radius: 6px;
   padding: 6px 10px;
 }
+
+.admin-precio-input {
+  width: 90px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}

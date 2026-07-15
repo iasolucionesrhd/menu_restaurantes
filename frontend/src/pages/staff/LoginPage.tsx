@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 
 export function LoginPage() {
   const { login, usuario } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
   if (usuario) {
-    navigate(usuario.rol === "admin" ? "/admin" : "/cocina", { replace: true });
+    return <Navigate to={usuario.rol === "admin" ? "/admin" : "/cocina"} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

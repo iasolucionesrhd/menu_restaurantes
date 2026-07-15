@@ -1,11 +1,23 @@
 import { api } from "./client";
 import type { CartItem, MetodoPago, Pedido } from "../types";
 
+export interface DatosFacturacionInput {
+  nombre: string;
+  cedula: string;
+  correo?: string;
+  telefono?: string;
+  direccion: string;
+  actividad_economica?: string;
+}
+
 export interface ClienteInput {
   nombre: string;
   correo?: string;
   telefono?: string;
   consentimiento_datos: boolean;
+  consentimiento_marketing: boolean;
+  google_id_token?: string;
+  datos_facturacion?: DatosFacturacionInput;
 }
 
 export interface CrearPedidoInput {

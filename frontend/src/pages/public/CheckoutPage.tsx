@@ -27,6 +27,7 @@ export function CheckoutPage() {
     correo: "",
     telefono: "",
     consentimiento_datos: true,
+    consentimiento_marketing: false,
   });
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("efectivo_en_restaurante");
   const [enviando, setEnviando] = useState(false);
@@ -67,6 +68,10 @@ export function CheckoutPage() {
 
   const esPagoOnline = metodoPago !== "efectivo_en_restaurante";
   const paymentMode = menuQuery.data?.payment_mode ?? "stub";
+  const datosFacturacion = cliente.datos_facturacion;
+  const facturaIncompleta =
+    datosFacturacion !== undefined &&
+    (!datosFacturacion.nombre.trim() || !datosFacturacion.cedula.trim() || !datosFacturacion.direccion.trim());
 
   return (
     <div className="checkout-page">
@@ -83,7 +88,7 @@ export function CheckoutPage() {
       </div>
 
       <form className="checkout-form" onSubmit={handleSubmitEfectivo}>
-        <CustomerForm value={cliente} onChange={setCliente} />
+        <CustomerForm slug={slug} value={cliente} onChange={setCliente} />
 
         <h3>Método de pago</h3>
         <PaymentMethodSelector value={metodoPago} onChange={setMetodoPago} />
@@ -104,7 +109,7 @@ export function CheckoutPage() {
             </p>
           )
         ) : (
-          <button type="submit" className="btn-primario" disabled={enviando || !cliente.nombre}>
+          <button type="submit" className="btn-primario" disabled={enviando || !cliente.nombre || facturaIncompleta}>
             {enviando ? "Enviando..." : "Confirmar pedido"}
           </button>
         )}
