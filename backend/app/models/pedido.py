@@ -28,6 +28,9 @@ class Pedido(Base):
     # ya se verificó contra el adaptador); efectivo_en_restaurante empieza
     # en False hasta que cajero lo marca al recibir el dinero.
     pagado: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Una vez incluido en un cierre de caja, el pedido queda "cuadrado" y no
+    # se puede cancelar (ver actualizar_estado_pedido en routers/pedidos.py).
+    cierre_caja_id: Mapped[int | None] = mapped_column(ForeignKey("cierre_caja.id"), nullable=True, index=True)
     tilopay_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tipo_entrega: Mapped[TipoEntrega] = mapped_column(
         Enum(TipoEntrega, name="tipo_entrega", native_enum=True, values_callable=lambda obj: [e.value for e in obj])
@@ -60,3 +63,4 @@ class Pedido(Base):
     nota_credito: Mapped["NotaCredito | None"] = relationship(
         back_populates="pedido", cascade="all, delete-orphan", uselist=False
     )
+    cierre_caja: Mapped["CierreCaja | None"] = relationship(back_populates="pedidos")

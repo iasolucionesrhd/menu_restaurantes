@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { EstadoPedido, Pedido, ResumenCaja } from "../types";
+import type { CierreCaja, EstadoPedido, Pedido, ResumenCaja } from "../types";
 import type { Mesa } from "./admin";
 
 export function listarPedidosStaff(estados: EstadoPedido[], pagado?: boolean) {
@@ -24,6 +24,14 @@ export function marcarPagado(pedidoId: number) {
 
 export function getResumenCaja() {
   return api.get<ResumenCaja>("/staff/pedidos/resumen-caja");
+}
+
+export function cerrarCaja() {
+  return api.post<CierreCaja>("/staff/pedidos/cierres-caja");
+}
+
+export function listarCierresCaja() {
+  return api.get<CierreCaja[]>("/staff/pedidos/cierres-caja");
 }
 
 export function listMesasStaff() {

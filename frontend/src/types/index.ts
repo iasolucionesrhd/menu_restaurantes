@@ -100,8 +100,24 @@ export interface Usuario {
 }
 
 export interface ResumenCaja {
-  cobrado_hoy: string;
-  pedidos_cobrados_hoy: number;
+  cobrado_periodo_actual: string;
+  pedidos_periodo_actual: number;
+}
+
+export interface CierreCaja {
+  id: number;
+  desde: string;
+  hasta: string;
+  total_efectivo: string;
+  cantidad_efectivo: number;
+  total_tarjeta: string;
+  cantidad_tarjeta: number;
+  total_sinpe: string;
+  cantidad_sinpe: number;
+  total_apple_pay: string;
+  cantidad_apple_pay: number;
+  total_general: string;
+  cantidad_general: number;
 }
 
 export interface Sucursal {

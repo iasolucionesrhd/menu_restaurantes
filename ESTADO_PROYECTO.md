@@ -4,41 +4,44 @@ Este archivo existe para poder retomar el trabajo desde cualquier máquina (bast
 
 ## Último commit en `main`
 ```
+9dd20f9 Add multi-branch support with an admin sucursal switcher
 de66e44 Add mesero and cajero staff roles with dedicated screens
-b255ec0 Add ingredient inventory, kitchen prep-time tracking, and product modifiers
 ```
-`de66e44` está en GitHub. **Lo de esta sesión (multisucursal) todavía NO está commiteado** — cambios locales pendientes.
+`9dd20f9` está en GitHub. **Lo de esta sesión (cierre de caja) todavía NO está commiteado** — cambios locales pendientes.
 
 ## Qué se hizo en esta sesión
-Se completó la **fase 3 de la iniciativa de 4 partes**: modificadores → roles mesero/cajero → **multisucursal (esta sesión)** → modo offline para eventos (pendiente).
+Se agregó **cierre de caja**, a pedido del usuario (fuera de las 4 fases originales, pero directamente relacionado con el rol cajero de la fase 2).
 
-**Multisucursal.**
-- Decisiones ya acordadas con el usuario: menú 100% independiente por sucursal, una sola cuenta admin con selector para cambiar entre sucursales.
-- `Restaurante` ya era una sucursal independiente (menú/mesas/pedidos aislados) — no se tocó ese modelo. Se agregó tabla puente `usuario_restaurante` (qué sucursales adicionales puede ver un admin, más allá de su sucursal de origen).
-- **Cambio de arquitectura clave:** `get_current_restaurante_id` (backend/app/deps.py) ahora lee la sucursal activa del **claim del JWT**, no de la fila fija `usuario.restaurante_id` en BD (antes sí lo hacía). Esto es 100% retrocompatible — para una cuenta de una sola sucursal el JWT siempre trae ese mismo id, así que nada cambia en la práctica. "Cambiar de sucursal" = pedir un token nuevo con otro `restaurante_id` (validado contra `usuario_restaurante` + la sucursal de origen), sin mutar ninguna fila.
-- Nuevos endpoints: `GET /api/auth/mis-restaurantes` (lista sucursales accesibles), `POST /api/auth/cambiar-restaurante` (emite un token nuevo), `POST /api/admin/sucursales` (admin crea una sucursal nueva — nombre + slug — y queda vinculada automáticamente a su cuenta).
-- Nuevo tab "Sucursales" en el panel admin: crea sucursales nuevas, lista las accesibles, marca cuál está "Activa", botón "Cambiar a esta" que pide el token nuevo y refresca todo el panel (todas las pestañas ya leen del token activo, no necesitaron cambios).
-- El staff de cocina/mesero/cajero **no** tiene este selector — están fijos a la sucursal donde se creó su cuenta (`usuario.restaurante_id` en BD), tal como se acordó (el switcher es solo para admin).
+**Cierre de caja.**
+- Nueva tabla `cierre_caja`: snapshot inmutable de lo cobrado desde el cierre anterior (o desde el primer pedido, si es el primero) hasta el momento de cerrar. Desglosado por método de pago (efectivo/tarjeta/sinpe/apple_pay), con total y cantidad de cada uno, más el total general.
+- `Pedido.cierre_caja_id` (nuevo, nullable): al cerrar, todos los pedidos elegibles (pagado=true, no cancelados, sin cierre previo) quedan marcados con el cierre que los incluyó. **Un pedido ya incluido en un cierre no se puede cancelar** (400 si se intenta) — protege el historial contable de cambios después de cuadrar la caja.
+- `resumen-caja` cambió de "cobrado hoy" (por fecha calendario) a **"cobrado en el período actual"** (desde el último cierre) — más correcto para turnos que cruzan medianoche o cierres varias veces al día. Los nombres de campo cambiaron: `cobrado_periodo_actual` / `pedidos_periodo_actual` (antes `cobrado_hoy` / `pedidos_cobrados_hoy`).
+- Nuevos endpoints: `POST /api/staff/pedidos/cierres-caja` (cierra y devuelve el desglose), `GET /api/staff/pedidos/cierres-caja` (historial). Permisos: admin y cajero (igual que marcar pagado).
+- Pantalla `/caja`: botón "Cerrar caja" (deshabilitado si no hay nada pendiente) que muestra el desglose recién cerrado, y un historial colapsable de cierres anteriores.
 
-**Verificación:** 79 tests de backend pasan (72 anteriores + 7 nuevos en `test_multisucursal.py`), `tsc --noEmit` sin errores. Probado en Docker de punta a punta: admin creó la sucursal "Pizzería Luna Cartago" desde el tab nuevo, cambió a ella, confirmó que el menú estaba vacío (aislado), creó una categoría de prueba ahí, volvió a "Pizzería Luna" y confirmó que sus categorías originales (Pizzas/Bebidas/Postres) seguían intactas sin ningún rastro de la prueba.
+**Verificación:** 85 tests de backend pasan (79 anteriores + 6 nuevos en `test_cierre_caja.py`), `tsc --noEmit` sin errores. Probado en Docker de punta a punta: pedidos en efectivo + tarjeta + SINPE → cerrar caja → desglose correcto por método → "por cerrar" vuelve a ₡0 → el historial muestra el cierre con fecha y montos.
+
+Nota técnica: durante la verificación manual, el clic simulado del navegador controlado no disparaba el botón "Cerrar caja" (aunque no estaba deshabilitado) — se confirmó con un `.click()` directo por JS que el botón y el endpoint funcionan bien; parece una particularidad puntual de esa herramienta de automatización, no un bug del código.
 
 ## Qué funciona ya verificado (de sesiones anteriores, sigue vigente)
 - `docker-compose up` levanta db + backend + frontend. Migraciones + seed corren solos al levantar el backend.
 - Flujo completo cliente: menú público (con modificadores) → carrito → checkout (invitado o Google) → confirmar pedido → cocina en tiempo real (WebSocket, con cronómetro) → recibido → en_cocina → listo → entregado (o cancelado).
-- Cancelar pedido desde cocina (solo recibido/en_cocina): admin sin restricción, cocina con PIN configurable. Genera nota de crédito interna si el pedido tenía factura, y devuelve el stock de ingredientes.
-- Panel admin: login, categorías/items (precio inline, receta de ingredientes, modificadores), mesas + QR, ingredientes (inventario), personal (usuarios de staff), **sucursales (multisucursal)**, seguridad (PIN).
-- Pantallas de staff por rol: `/cocina` (admin/cocina), `/mesero` (admin/mesero), `/caja` (admin/cajero), `/admin` (admin). Redirección post-login automática según rol.
+- Cancelar pedido desde cocina (solo recibido/en_cocina, y solo si no quedó ya en un cierre de caja): admin sin restricción, cocina con PIN configurable. Genera nota de crédito interna si el pedido tenía factura, y devuelve el stock de ingredientes.
+- Panel admin: login, categorías/items (precio inline, receta de ingredientes, modificadores), mesas + QR, ingredientes (inventario), personal (usuarios de staff), sucursales (multisucursal), seguridad (PIN).
+- Pantallas de staff por rol: `/cocina` (admin/cocina), `/mesero` (admin/mesero), `/caja` (admin/cajero, ahora con cierre de caja), `/admin` (admin). Redirección post-login automática según rol.
+- Multisucursal: una cuenta admin puede crear y cambiar entre sucursales, cada una con menú/mesas/pedidos/**cierres de caja** totalmente independientes.
 - Snapshot de precio inmutable en pedidos ya creados (incluye el precio de los modificadores elegidos).
 - Consentimiento de datos (Ley 8968) + marketing. Captura de datos de factura en checkout (solo captura, no emite comprobante real).
 - Sign-In con Google en checkout, aislado por tenant, con autorelleno de perfil en pedidos repetidos — confirmado funcionando con cuenta real.
 
 ## Pendiente para la próxima sesión
-1. **Revisar y hacer commit + push** de los cambios de esta sesión (multisucursal) — están en el working tree, no en git todavía.
-2. **Fase 4 (última de la iniciativa): modo offline híbrido para eventos/ferias temporales.** Idea validada con el usuario: un mini-servidor local que actúa de proxy a la nube cuando hay internet, y sirve el menú/pedidos localmente (solo invitado + efectivo) cuando no lo hay. Aún sin diseñar en detalle — falta decidir qué hardware/software se recomienda para el mini-servidor y cómo se implementa el "modo evento" (feature flag que oculta Google Sign-In/pago online cuando no hay salida a internet).
-3. No hay UI para cambiar/resetear la contraseña de un usuario de staff una vez creado (el usuario preguntó por esto) — solo se puede borrar y recrear la cuenta. Ofrecido implementarlo, no confirmado todavía.
+1. **Revisar y hacer commit + push** de los cambios de esta sesión (cierre de caja) — están en el working tree, no en git todavía.
+2. **Fase 4 (última de la iniciativa original): modo offline híbrido para eventos/ferias temporales.** Idea validada con el usuario: un mini-servidor local que actúa de proxy a la nube cuando hay internet, y sirve el menú/pedidos localmente (solo invitado + efectivo) cuando no lo hay. Aún sin diseñar en detalle.
+3. No hay UI para cambiar/resetear la contraseña de un usuario de staff una vez creado — solo se puede borrar y recrear la cuenta. Ofrecido implementarlo, no confirmado todavía.
 4. No hay UI para *ver* las notas de crédito generadas — evaluar cuando se aborde facturación electrónica real.
 5. El usuario está evaluando **patentar el software** en su país — todavía no es una tarea de código.
 6. Considerar si el mesero debería poder cobrar con otros métodos además de efectivo (hoy el pedido asistido siempre fuerza `efectivo_en_restaurante`).
+7. Considerar si hace falta un reporte/export (PDF o similar) de un cierre de caja para entregarlo físicamente o archivarlo — hoy solo se ve en pantalla.
 
 No hay ningún bug conocido pendiente en este momento.
 

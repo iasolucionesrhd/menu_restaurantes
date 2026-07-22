@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.enums import TRANSICIONES_ESTADO_PEDIDO, EstadoPedido, MetodoPago, TipoEntrega
+from app.models.cierre_caja import CierreCaja
 from app.models.cliente import Cliente
 from app.models.ingrediente import Ingrediente
 from app.models.item import Item
@@ -21,6 +23,13 @@ from app.models.restaurante import Restaurante
 from app.schemas.pedido import ClienteCreate, ItemPedidoCreate
 from app.services.google_auth import verify_google_id_token
 from app.services.payments.base import PaymentAdapter
+
+_COLUMNAS_POR_METODO: dict[MetodoPago, tuple[str, str]] = {
+    MetodoPago.EFECTIVO_EN_RESTAURANTE: ("total_efectivo", "cantidad_efectivo"),
+    MetodoPago.TARJETA: ("total_tarjeta", "cantidad_tarjeta"),
+    MetodoPago.SINPE: ("total_sinpe", "cantidad_sinpe"),
+    MetodoPago.APPLE_PAY: ("total_apple_pay", "cantidad_apple_pay"),
+}
 
 
 async def _ajustar_stock(db: AsyncSession, items_cantidades: list[tuple[int, int]], *, signo: int) -> None:
@@ -288,6 +297,56 @@ async def marcar_pagado(db: AsyncSession, pedido: Pedido) -> Pedido:
     pedido.pagado = True
     await db.commit()
     return pedido
+
+
+async def cerrar_caja(db: AsyncSession, restaurante_id: int, usuario_id: int) -> CierreCaja:
+    """Cuadra todo lo cobrado (pagado=True, no cancelado) desde el cierre
+    anterior hasta ahora, y deja esos pedidos bloqueados (no cancelables)."""
+    ultimo = await db.execute(
+        select(CierreCaja.hasta)
+        .where(CierreCaja.restaurante_id == restaurante_id)
+        .order_by(CierreCaja.hasta.desc())
+        .limit(1)
+    )
+    desde = ultimo.scalar_one_or_none()
+
+    result = await db.execute(
+        select(Pedido).where(
+            Pedido.restaurante_id == restaurante_id,
+            Pedido.pagado.is_(True),
+            Pedido.cierre_caja_id.is_(None),
+            Pedido.estado != EstadoPedido.CANCELADO,
+        )
+    )
+    pedidos = result.scalars().all()
+    if desde is None:
+        desde = min((p.creado_en for p in pedidos), default=datetime.now(timezone.utc))
+
+    totales = {metodo: [Decimal("0"), 0] for metodo in _COLUMNAS_POR_METODO}
+    for pedido in pedidos:
+        fila = totales[pedido.metodo_pago]
+        fila[0] += pedido.monto_total
+        fila[1] += 1
+
+    cierre = CierreCaja(
+        restaurante_id=restaurante_id,
+        usuario_id=usuario_id,
+        desde=desde,
+        total_general=sum((fila[0] for fila in totales.values()), Decimal("0")),
+        cantidad_general=len(pedidos),
+        **{
+            campo: valor
+            for metodo, (total_col, cantidad_col) in _COLUMNAS_POR_METODO.items()
+            for campo, valor in ((total_col, totales[metodo][0]), (cantidad_col, totales[metodo][1]))
+        },
+    )
+    db.add(cierre)
+    await db.flush()
+    for pedido in pedidos:
+        pedido.cierre_caja_id = cierre.id
+    await db.commit()
+    await db.refresh(cierre)
+    return cierre
 
 
 async def generar_nota_credito(db: AsyncSession, pedido: Pedido) -> NotaCredito:

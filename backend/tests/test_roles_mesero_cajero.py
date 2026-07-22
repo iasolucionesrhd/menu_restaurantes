@@ -205,7 +205,7 @@ async def test_pedido_con_tarjeta_queda_pagado_automaticamente(
     assert response.json()["pagado"] is True
 
 
-async def test_resumen_caja_suma_pedidos_pagados_del_dia(
+async def test_resumen_caja_suma_pedidos_pagados_del_periodo_actual(
     client: AsyncClient, db: AsyncSession, make_restaurante, make_usuario, make_categoria, make_item, make_mesa
 ):
     restaurante = await make_restaurante(db)
@@ -222,5 +222,5 @@ async def test_resumen_caja_suma_pedidos_pagados_del_dia(
     response = await client.get("/api/staff/pedidos/resumen-caja", headers=headers)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["pedidos_cobrados_hoy"] == 1
-    assert float(body["cobrado_hoy"]) == 4.00
+    assert body["pedidos_periodo_actual"] == 1
+    assert float(body["cobrado_periodo_actual"]) == 4.00

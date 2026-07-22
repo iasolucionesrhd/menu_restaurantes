@@ -1,4 +1,5 @@
 from app.models.categoria import Categoria
+from app.models.cierre_caja import CierreCaja
 from app.models.cliente import Cliente
 from app.models.ingrediente import Ingrediente
 from app.models.item import Item
@@ -16,6 +17,7 @@ from app.models.usuario_restaurante import UsuarioRestaurante
 
 __all__ = [
     "Categoria",
+    "CierreCaja",
     "Cliente",
     "Ingrediente",
     "Item",

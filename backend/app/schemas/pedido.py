@@ -115,5 +115,23 @@ class PedidoAsistidoCreateRequest(BaseModel):
 
 
 class ResumenCajaOut(BaseModel):
-    cobrado_hoy: Decimal
-    pedidos_cobrados_hoy: int
+    cobrado_periodo_actual: Decimal
+    pedidos_periodo_actual: int
+
+
+class CierreCajaOut(BaseModel):
+    id: int
+    desde: datetime
+    hasta: datetime
+    total_efectivo: Decimal
+    cantidad_efectivo: int
+    total_tarjeta: Decimal
+    cantidad_tarjeta: int
+    total_sinpe: Decimal
+    cantidad_sinpe: int
+    total_apple_pay: Decimal
+    cantidad_apple_pay: int
+    total_general: Decimal
+    cantidad_general: int
+
+    model_config = {"from_attributes": True}

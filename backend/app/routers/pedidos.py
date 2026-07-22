@@ -1,5 +1,3 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,14 +6,22 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.deps import get_current_restaurante_id, get_current_usuario, get_restaurante_by_slug, require_role
 from app.enums import EstadoPedido, RolUsuario
+from app.models.cierre_caja import CierreCaja
 from app.models.item_pedido import ItemPedido
 from app.models.pedido import Pedido
 from app.models.restaurante import Restaurante
 from app.models.usuario import Usuario
-from app.schemas.pedido import ActualizarEstadoRequest, PedidoCreateRequest, PedidoOut, ResumenCajaOut
+from app.schemas.pedido import (
+    ActualizarEstadoRequest,
+    CierreCajaOut,
+    PedidoCreateRequest,
+    PedidoOut,
+    ResumenCajaOut,
+)
 from app.schemas.ws_messages import EstadoActualizadoMessage, NuevoPedidoMessage
 from app.security import verify_password
 from app.services.pedido_service import (
+    cerrar_caja,
     crear_pedido,
     generar_nota_credito,
     marcar_pagado,
@@ -122,15 +128,48 @@ async def resumen_caja(
     db: AsyncSession = Depends(get_db),
     restaurante_id: int = Depends(get_current_restaurante_id),
 ) -> ResumenCajaOut:
+    # "Periodo actual" = lo cobrado desde el último cierre de caja (o desde
+    # siempre, si nunca se ha cerrado). Es justo lo que un cierre nuevo
+    # cuadraría en este momento.
     result = await db.execute(
         select(func.count(Pedido.id), func.coalesce(func.sum(Pedido.monto_total), 0)).where(
             Pedido.restaurante_id == restaurante_id,
             Pedido.pagado.is_(True),
-            func.date(Pedido.creado_en) == date.today(),
+            Pedido.cierre_caja_id.is_(None),
+            Pedido.estado != EstadoPedido.CANCELADO,
         )
     )
     cantidad, total = result.one()
-    return ResumenCajaOut(cobrado_hoy=total, pedidos_cobrados_hoy=cantidad)
+    return ResumenCajaOut(cobrado_periodo_actual=total, pedidos_periodo_actual=cantidad)
+
+
+@staff_router.post(
+    "/cierres-caja",
+    response_model=CierreCajaOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(RolUsuario.ADMIN, RolUsuario.CAJERO))],
+)
+async def crear_cierre_caja(
+    db: AsyncSession = Depends(get_db),
+    usuario: Usuario = Depends(get_current_usuario),
+    restaurante_id: int = Depends(get_current_restaurante_id),
+) -> CierreCaja:
+    return await cerrar_caja(db, restaurante_id, usuario.id)
+
+
+@staff_router.get(
+    "/cierres-caja",
+    response_model=list[CierreCajaOut],
+    dependencies=[Depends(require_role(RolUsuario.ADMIN, RolUsuario.CAJERO))],
+)
+async def listar_cierres_caja(
+    db: AsyncSession = Depends(get_db),
+    restaurante_id: int = Depends(get_current_restaurante_id),
+) -> list[CierreCaja]:
+    result = await db.execute(
+        select(CierreCaja).where(CierreCaja.restaurante_id == restaurante_id).order_by(CierreCaja.hasta.desc())
+    )
+    return list(result.scalars().all())
 
 
 @staff_router.patch(
@@ -157,6 +196,11 @@ async def actualizar_estado_pedido(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
 
     if payload.estado == EstadoPedido.CANCELADO:
+        if pedido.cierre_caja_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este pedido ya quedó incluido en un cierre de caja, no se puede cancelar",
+            )
         if usuario.rol not in (RolUsuario.ADMIN, RolUsuario.COCINA):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado para esta acción")
         if usuario.rol == RolUsuario.COCINA:
