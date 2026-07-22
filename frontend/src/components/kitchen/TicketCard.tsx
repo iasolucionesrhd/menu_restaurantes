@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
+import { formatTranscurrido } from "../../utils/format";
 import type { EstadoPedido, MetodoPago, Pedido } from "../../types";
 
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
@@ -24,6 +25,24 @@ const ETIQUETA_PAGO: Record<MetodoPago, string> = {
 
 const ESTADOS_CANCELABLES: EstadoPedido[] = ["recibido", "en_cocina"];
 
+const ETIQUETA_TIEMPO: Partial<Record<EstadoPedido, string>> = {
+  recibido: "esperando",
+  en_cocina: "en cocina",
+  listo: "listo",
+};
+
+function useTranscurrido(pedido: Pedido): string | null {
+  const [, forzarRender] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forzarRender((n) => n + 1), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  const desde = pedido.estado === "en_cocina" ? pedido.en_cocina_en : pedido.estado === "listo" ? pedido.listo_en : pedido.creado_en;
+  if (!desde) return null;
+  return formatTranscurrido(desde);
+}
+
 export function TicketCard({
   pedido,
   onAvanzar,
@@ -36,6 +55,7 @@ export function TicketCard({
   const { usuario } = useAuth();
   const siguiente = SIGUIENTE_ESTADO[pedido.estado];
   const puedeCancelar = ESTADOS_CANCELABLES.includes(pedido.estado);
+  const transcurrido = useTranscurrido(pedido);
 
   const [cancelando, setCancelando] = useState(false);
   const [pin, setPin] = useState("");
@@ -58,6 +78,9 @@ export function TicketCard({
     <div className="ticket-card">
       <strong>{pedido.tipo_entrega === "mesa" ? `Mesa ${pedido.mesa_numero}` : "Para retirar"}</strong>
       <span> — Pedido #{pedido.id}</span>
+      {transcurrido && (
+        <span className="ticket-tiempo"> ⏱️ {transcurrido} {ETIQUETA_TIEMPO[pedido.estado]}</span>
+      )}
       <div>
         <span className={`pago-badge pago-badge-${pedido.metodo_pago === "efectivo_en_restaurante" ? "efectivo" : "pagado"}`}>
           {ETIQUETA_PAGO[pedido.metodo_pago]}
@@ -67,6 +90,7 @@ export function TicketCard({
         {pedido.items.map((item) => (
           <li key={item.id}>
             {item.cantidad}× {item.nombre}
+            {item.modificadores.length > 0 && ` — ${item.modificadores.map((m) => m.nombre).join(", ")}`}
             {item.notas ? ` (${item.notas})` : ""}
           </li>
         ))}

@@ -2,7 +2,6 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.enums import EstadoPedido
 from app.schemas.pedido import PedidoOut
 
 
@@ -13,5 +12,4 @@ class NuevoPedidoMessage(BaseModel):
 
 class EstadoActualizadoMessage(BaseModel):
     tipo: Literal["estado_actualizado"] = "estado_actualizado"
-    pedido_id: int
-    estado: EstadoPedido
+    pedido: PedidoOut

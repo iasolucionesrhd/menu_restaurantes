@@ -31,3 +31,4 @@ class Restaurante(Base):
     items: Mapped[list["Item"]] = relationship(back_populates="restaurante", cascade="all, delete-orphan")
     clientes: Mapped[list["Cliente"]] = relationship(back_populates="restaurante", cascade="all, delete-orphan")
     pedidos: Mapped[list["Pedido"]] = relationship(back_populates="restaurante", cascade="all, delete-orphan")
+    ingredientes: Mapped[list["Ingrediente"]] = relationship(back_populates="restaurante", cascade="all, delete-orphan")

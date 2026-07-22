@@ -18,3 +18,6 @@ class ItemPedido(Base):
 
     pedido: Mapped["Pedido"] = relationship(back_populates="items")
     item: Mapped["Item"] = relationship()
+    modificadores: Mapped[list["ItemPedidoModificador"]] = relationship(
+        back_populates="item_pedido", cascade="all, delete-orphan"
+    )

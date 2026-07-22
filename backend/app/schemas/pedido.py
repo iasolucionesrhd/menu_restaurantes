@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
@@ -35,6 +36,7 @@ class ItemPedidoCreate(BaseModel):
     item_id: int
     cantidad: int
     notas: str | None = None
+    modificador_ids: list[int] = []
 
     @field_validator("cantidad")
     @classmethod
@@ -52,6 +54,13 @@ class PedidoCreateRequest(BaseModel):
     payment_intent_id: str | None = None
 
 
+class ItemPedidoModificadorOut(BaseModel):
+    nombre: str
+    precio_extra: Decimal
+
+    model_config = {"from_attributes": True}
+
+
 class ItemPedidoOut(BaseModel):
     id: int
     item_id: int
@@ -59,6 +68,7 @@ class ItemPedidoOut(BaseModel):
     cantidad: int
     precio_unitario: Decimal
     notas: str | None
+    modificadores: list[ItemPedidoModificadorOut] = []
 
     model_config = {"from_attributes": True}
 
@@ -79,6 +89,9 @@ class PedidoOut(BaseModel):
     factura_telefono: str | None
     factura_direccion: str | None
     factura_actividad_economica: str | None
+    creado_en: datetime
+    en_cocina_en: datetime | None
+    listo_en: datetime | None
     items: list[ItemPedidoOut]
 
 

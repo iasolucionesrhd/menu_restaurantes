@@ -20,11 +20,11 @@ export function KitchenScreen() {
 
   const { conectado } = useKitchenSocket(usuario?.restaurante_slug, {
     onNuevoPedido: (pedido) => setPedidos((prev) => [...prev, pedido]),
-    onEstadoActualizado: (pedidoId, estado) =>
+    onEstadoActualizado: (pedido) =>
       setPedidos((prev) =>
-        ESTADOS_ACTIVOS.includes(estado)
-          ? prev.map((p) => (p.id === pedidoId ? { ...p, estado } : p))
-          : prev.filter((p) => p.id !== pedidoId)
+        ESTADOS_ACTIVOS.includes(pedido.estado)
+          ? prev.map((p) => (p.id === pedido.id ? pedido : p))
+          : prev.filter((p) => p.id !== pedido.id)
       ),
   });
 

@@ -4,37 +4,46 @@ Este archivo existe para poder retomar el trabajo desde cualquier máquina (bast
 
 ## Último commit en `main`
 ```
+f2ecdd2 Add order cancellation from kitchen with PIN gate and credit-note stub
 c9bf2ef Rewrite ESTADO_PROYECTO.md as a clean current-state snapshot
-5fa9e56 Add Google Sign-In, marketing consent, and digital invoice capture to checkout
 ```
-Todo lo anterior ya está en GitHub. **Lo de esta sesión (cancelación de pedidos + nota de crédito) todavía NO está commiteado** — son cambios locales pendientes de revisar/commitear.
+Todo lo anterior ya está en GitHub. **Lo de esta sesión (ingredientes/receta + control de inventario + tiempos de cocina) todavía NO está commiteado** — son cambios locales pendientes de revisar/commitear.
 
 ## Qué se hizo en esta sesión
-- Se sincronizó la carpeta local (estaba 4 commits detrás de `origin/main`).
-- Se levantó `docker-compose` y se verificó el flujo completo en el navegador (menú → carrito → checkout → cocina), incluyendo el botón de Google Sign-In (ya con `GOOGLE_CLIENT_ID` configurado en `.env`/`frontend/.env`).
-- **Nueva feature: cancelar pedido desde cocina.**
-  - Cancelable solo en estados `recibido` y `en_cocina` (no en `listo`, ya se asume preparado). `TRANSICIONES_ESTADO_PEDIDO` en `backend/app/enums.py` ajustado para reflejar esto.
-  - Admin cancela sin restricciones. Cocina necesita un **código de cancelación (PIN)** configurable por el admin desde el nuevo tab "Seguridad" del panel admin (`PATCH /api/admin/restaurante` con `pin_cancelacion`, se guarda hasheado con argon2 igual que las contraseñas — nunca en texto plano).
-  - Si cocina intenta cancelar sin que el admin haya configurado un PIN → 400. PIN incorrecto → 401.
-  - Al cancelar un pedido con `requiere_factura=true` se genera un registro interno en la tabla nueva `nota_credito` (pedido_id, monto, motivo, fecha). Es un **stub**: no genera XML ni se envía a Hacienda, mismo alcance que la captura de datos de factura hoy.
-  - Migración: `7d6468a2718c_add_cancelacion_pin_y_nota_credito.py` (agrega `restaurante.pin_cancelacion_hash` y la tabla `nota_credito`). Ya aplicada en la base de datos local.
-  - 7 tests nuevos en `backend/tests/test_cancelacion_pedido.py`. Los 48 tests de backend pasan (41 anteriores + 7 nuevos).
-  - Verificado manualmente en Docker real: admin configuró PIN "4321" para pizzeria-luna, cocina no pudo cancelar con PIN incorrecto, sí pudo con el correcto, el pedido desapareció del tablero en tiempo real (WebSocket), y al cancelar un pedido facturado se creó la nota de crédito con el monto correcto.
+**Nueva feature 1: receta de ingredientes + control de inventario por item.**
+- Tabla `ingrediente` (nombre, unidad, stock_actual, stock_minimo) y tabla `item_ingrediente` (receta: cuánto de cada ingrediente requiere una unidad de un item). Migración `3fa6a3a36f72_add_ingredientes_receta_y_tiempos_de_.py`.
+- CRUD de ingredientes en `/api/admin/ingredientes` (nuevo router `backend/app/routers/ingredientes.py`) y tab "Ingredientes" en el panel admin, con alerta visual (`stock_bajo`, fila resaltada) cuando `stock_actual <= stock_minimo`.
+- Editor de receta por item: botón "Definir receta"/"Receta (n)" en el tab Items del panel admin, endpoint `PUT /api/admin/items/{id}/ingredientes` que reemplaza la lista completa de la receta.
+- Al confirmar un pedido, se descuenta `cantidad_requerida × cantidad_pedida` de cada ingrediente de la receta (`descontar_stock` en `pedido_service.py`). **No bloquea la venta** aunque falte stock — el stock puede quedar negativo, solo se alerta visualmente en el admin (decisión explícita del usuario).
+- Al **cancelar** un pedido (recibido/en_cocina), el stock descontado se devuelve automáticamente (`restaurar_stock`) — mismo principio que la nota de crédito: cancelar revierte el pedido por completo.
+- Los updates de stock usan `UPDATE ... SET stock_actual = stock_actual - :delta` (atómico a nivel de fila), no read-then-write, para evitar carreras entre pedidos concurrentes.
+
+**Nueva feature 2: tracking de tiempos de cocina, con cronómetro en vivo.**
+- `Pedido` ahora tiene `en_cocina_en` y `listo_en` (además de `creado_en` que ya existía pero no se exponía en `PedidoOut` — se agregó). Se llenan automáticamente en `transicionar_estado` al entrar a cada estado.
+- Cada ticket en `/cocina` muestra un cronómetro en vivo (`⏱️ X min esperando / en cocina / listo`) que se actualiza cada 15s, calculado desde el timestamp del estado actual del pedido.
+- El mensaje WebSocket `estado_actualizado` ahora manda el `PedidoOut` completo (antes solo mandaba `pedido_id` + `estado`) para que todos los clientes conectados vean el mismo timestamp, no uno calculado localmente.
+
+**Verificación:**
+- 56 tests de backend pasan (48 anteriores + 8 nuevos: `test_ingredientes_stock.py`, `test_pedido_tiempos_cocina.py`).
+- `tsc --noEmit` sin errores en el frontend.
+- Probado en vivo en Docker: se creó el ingrediente "Mozzarella" (stock 2000g), se le definió receta a "Pizza Margarita" (200g), se hizo un pedido → stock bajó a 1800g, se pasó el pedido a "en cocina" → cronómetro cambió de "esperando" a "en cocina" en tiempo real, se canceló → stock volvió a 2000g.
+- Nota al margen (no relacionado a esta feature): varios items demo (Pizza Margarita, Pepperoni, Hawaiana, Refresco natural) estaban marcados `disponible=false` en la base de datos local desde antes de esta sesión — se reactivó Pizza Margarita manualmente para poder probar. Si en la otra máquina el menú público se ve con pocos items, revisar el checkbox "Disponible" en el tab Items del admin.
 
 ## Qué funciona ya verificado (de sesiones anteriores, sigue vigente)
 - `docker-compose up` levanta db + backend + frontend. Migraciones + seed corren solos al levantar el backend.
-- Flujo completo cliente: menú público → carrito → checkout (invitado o Google) → confirmar pedido → pantalla de cocina en tiempo real (WebSocket) → transición de estados recibido → en_cocina → listo → entregado (o cancelado, ver arriba).
-- Panel admin: login, gestionar categorías/items (incluye editar precio inline), mesas + generación de QR, y ahora seguridad (PIN de cancelación).
-- `/cocina` y `/admin` redirigen a `/login` sin sesión; un rol sin permiso ve una página 403 propia.
+- Flujo completo cliente: menú público → carrito → checkout (invitado o Google) → confirmar pedido → pantalla de cocina en tiempo real (WebSocket) → transición de estados recibido → en_cocina → listo → entregado (o cancelado).
+- Cancelar pedido desde cocina (solo recibido/en_cocina): admin sin restricción, cocina con PIN configurable en tab "Seguridad". Genera nota de crédito interna si el pedido tenía factura.
+- Panel admin: login, categorías/items (precio inline, receta de ingredientes), mesas + QR, ingredientes (inventario), seguridad (PIN), roles con página 403 propia.
 - Snapshot de precio inmutable en pedidos ya creados.
 - Consentimiento de datos (Ley 8968) + marketing.
 - Captura de datos de factura en checkout (solo captura, no emite comprobante real).
 - Sign-In con Google en checkout, aislado por tenant, con autorelleno de perfil en pedidos repetidos.
 
 ## Pendiente para la próxima sesión
-1. **Revisar y hacer commit** de los cambios de esta sesión (cancelación + nota de crédito) — están en el working tree, no en git todavía.
-2. Sigue pendiente de otra sesión: confirmar con una cuenta real de Google que el autorelleno de perfil (nombre/correo/teléfono + datos de factura) funciona en un segundo pedido — nunca se probó de punta a punta con una cuenta real dentro de una sesión de Claude Code.
-3. No hay UI para *ver* las notas de crédito generadas (solo quedan en la tabla `nota_credito`) — evaluar si hace falta una pantalla de reportes cuando se decida abordar facturación electrónica real.
+1. **Revisar y hacer commit** de los cambios de esta sesión (ingredientes/inventario + tiempos de cocina) — están en el working tree, no en git todavía.
+2. Sigue pendiente de otra sesión: confirmar con una cuenta real de Google que el autorelleno de perfil funciona en un segundo pedido.
+3. No hay UI para *ver* las notas de crédito generadas — evaluar cuando se aborde facturación electrónica real.
+4. Considerar si el inventario necesita alguna forma de "reponer stock" en bloque (hoy solo se edita a mano el campo stock_actual desde el tab Ingredientes) si el negocio lo pide.
 
 No hay ningún bug conocido pendiente en este momento.
 

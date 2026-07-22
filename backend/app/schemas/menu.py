@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.modificador import ModificadorGrupoOut
+
 
 class ItemMenuOut(BaseModel):
     id: int
@@ -9,6 +11,7 @@ class ItemMenuOut(BaseModel):
     descripcion: str | None
     precio: Decimal
     imagen_url: str | None
+    modificador_grupos: list[ModificadorGrupoOut] = []
 
     model_config = {"from_attributes": True}
 

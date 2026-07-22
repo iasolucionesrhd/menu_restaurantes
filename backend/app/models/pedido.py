@@ -44,6 +44,10 @@ class Pedido(Base):
     actualizado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+    # Marcas de tiempo para medir cuánto tarda cocina; se llenan al entrar a
+    # cada estado (ver transicionar_estado), no son editables directamente.
+    en_cocina_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    listo_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     restaurante: Mapped["Restaurante"] = relationship(back_populates="pedidos")
     mesa: Mapped["Mesa | None"] = relationship(back_populates="pedidos")

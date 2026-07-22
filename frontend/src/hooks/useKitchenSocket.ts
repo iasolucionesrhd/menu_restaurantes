@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { EstadoPedido, Pedido } from "../types";
+import type { Pedido } from "../types";
 
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8000/api/ws";
 
 type Mensaje =
   | { tipo: "nuevo_pedido"; pedido: Pedido }
-  | { tipo: "estado_actualizado"; pedido_id: number; estado: EstadoPedido };
+  | { tipo: "estado_actualizado"; pedido: Pedido };
 
 interface Callbacks {
   onNuevoPedido: (pedido: Pedido) => void;
-  onEstadoActualizado: (pedidoId: number, estado: EstadoPedido) => void;
+  onEstadoActualizado: (pedido: Pedido) => void;
 }
 
 export function useKitchenSocket(slug: string | undefined, callbacks: Callbacks) {
@@ -35,7 +35,7 @@ export function useKitchenSocket(slug: string | undefined, callbacks: Callbacks)
         if (mensaje.tipo === "nuevo_pedido") {
           callbacksRef.current.onNuevoPedido(mensaje.pedido);
         } else if (mensaje.tipo === "estado_actualizado") {
-          callbacksRef.current.onEstadoActualizado(mensaje.pedido_id, mensaje.estado);
+          callbacksRef.current.onEstadoActualizado(mensaje.pedido);
         }
       };
 

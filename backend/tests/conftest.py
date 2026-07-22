@@ -13,7 +13,9 @@ from app.database import Base, get_db
 from app.enums import RolUsuario
 from app.main import app
 from app.models.categoria import Categoria
+from app.models.ingrediente import Ingrediente
 from app.models.item import Item
+from app.models.item_ingrediente import ItemIngrediente
 from app.models.mesa import Mesa
 from app.models.restaurante import Restaurante
 from app.models.usuario import Usuario
@@ -134,6 +136,48 @@ def make_item():
         await db.commit()
         await db.refresh(item)
         return item
+
+    return _make
+
+
+@pytest.fixture
+def make_ingrediente():
+    async def _make(
+        db: AsyncSession,
+        *,
+        restaurante: Restaurante,
+        nombre: str = "Mozzarella",
+        unidad: str = "g",
+        stock_actual: str = "1000",
+        stock_minimo: str = "100",
+    ) -> Ingrediente:
+        ingrediente = Ingrediente(
+            restaurante_id=restaurante.id,
+            nombre=nombre,
+            unidad=unidad,
+            stock_actual=stock_actual,
+            stock_minimo=stock_minimo,
+        )
+        db.add(ingrediente)
+        await db.commit()
+        await db.refresh(ingrediente)
+        return ingrediente
+
+    return _make
+
+
+@pytest.fixture
+def make_receta():
+    async def _make(
+        db: AsyncSession, *, item: Item, ingrediente: Ingrediente, cantidad_requerida: str = "200"
+    ) -> ItemIngrediente:
+        receta = ItemIngrediente(
+            item_id=item.id, ingrediente_id=ingrediente.id, cantidad_requerida=cantidad_requerida
+        )
+        db.add(receta)
+        await db.commit()
+        await db.refresh(receta)
+        return receta
 
     return _make
 

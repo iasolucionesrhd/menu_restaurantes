@@ -1,9 +1,24 @@
+export interface ModificadorMenu {
+  id: number;
+  nombre: string;
+  precio_extra: string;
+}
+
+export interface ModificadorGrupoMenu {
+  id: number;
+  nombre: string;
+  obligatorio: boolean;
+  seleccion_multiple: boolean;
+  modificadores: ModificadorMenu[];
+}
+
 export interface ItemMenu {
   id: number;
   nombre: string;
   descripcion: string | null;
   precio: string;
   imagen_url: string | null;
+  modificador_grupos: ModificadorGrupoMenu[];
 }
 
 export interface CategoriaMenu {
@@ -24,17 +39,29 @@ export interface MesaPublica {
   tipo_entrega: "mesa" | "retiro";
 }
 
+export interface CartItemModificador {
+  modificadorId: number;
+  nombre: string;
+  precioExtra: string;
+}
+
 export interface CartItem {
   itemId: number;
   nombre: string;
   precioUnitario: string;
   cantidad: number;
   notas?: string;
+  modificadores?: CartItemModificador[];
 }
 
 export type MetodoPago = "tarjeta" | "sinpe" | "apple_pay" | "efectivo_en_restaurante";
 
 export type EstadoPedido = "recibido" | "en_cocina" | "listo" | "entregado" | "cancelado";
+
+export interface ItemPedidoModificador {
+  nombre: string;
+  precio_extra: string;
+}
 
 export interface ItemPedido {
   id: number;
@@ -43,6 +70,7 @@ export interface ItemPedido {
   cantidad: number;
   precio_unitario: string;
   notas: string | null;
+  modificadores: ItemPedidoModificador[];
 }
 
 export interface Pedido {
@@ -54,6 +82,8 @@ export interface Pedido {
   mesa_numero: number | null;
   cliente_nombre: string;
   creado_en: string;
+  en_cocina_en: string | null;
+  listo_en: string | null;
   requiere_factura: boolean;
   items: ItemPedido[];
 }

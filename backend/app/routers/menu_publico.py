@@ -7,7 +7,9 @@ from app.config import settings
 from app.database import get_db
 from app.deps import get_restaurante_by_slug
 from app.models.categoria import Categoria
+from app.models.item import Item
 from app.models.mesa import Mesa
+from app.models.modificador_grupo import ModificadorGrupo
 from app.models.restaurante import Restaurante
 from app.schemas.menu import CategoriaMenuOut, MenuPublicoOut, MesaPublicaOut
 
@@ -22,7 +24,11 @@ async def get_menu_publico(
     result = await db.execute(
         select(Categoria)
         .where(Categoria.restaurante_id == restaurante.id)
-        .options(selectinload(Categoria.items))
+        .options(
+            selectinload(Categoria.items)
+            .selectinload(Item.modificador_grupos)
+            .selectinload(ModificadorGrupo.modificadores)
+        )
         .order_by(Categoria.orden)
     )
     categorias = result.scalars().all()

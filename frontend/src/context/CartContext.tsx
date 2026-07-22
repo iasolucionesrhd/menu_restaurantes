@@ -11,8 +11,8 @@ interface CartState {
 type CartAction =
   | { type: "SET_CONTEXTO"; restauranteSlug: string; mesaCodigoQr: string; tipoEntrega: "mesa" | "retiro" }
   | { type: "ADD_ITEM"; item: CartItem }
-  | { type: "UPDATE_CANTIDAD"; itemId: number; cantidad: number }
-  | { type: "REMOVE_ITEM"; itemId: number }
+  | { type: "UPDATE_CANTIDAD"; clave: string; cantidad: number }
+  | { type: "REMOVE_ITEM"; clave: string }
   | { type: "CLEAR" };
 
 const STORAGE_KEY = "menu-digital-cart";
@@ -23,6 +23,17 @@ const initialState: CartState = {
   tipoEntrega: null,
   items: [],
 };
+
+// Dos líneas del carrito son "la misma" solo si coinciden item, notas Y el
+// mismo conjunto de modificadores elegidos — Pizza Grande y Pizza Chica no
+// deben sumarse en una sola línea.
+export function claveLineaCarrito(item: Pick<CartItem, "itemId" | "notas" | "modificadores">): string {
+  const modKey = (item.modificadores ?? [])
+    .map((m) => m.modificadorId)
+    .sort((a, b) => a - b)
+    .join(",");
+  return `${item.itemId}|${item.notas ?? ""}|${modKey}`;
+}
 
 function loadInitialState(): CartState {
   try {
@@ -51,9 +62,8 @@ function reducer(state: CartState, action: CartAction): CartState {
       return { ...state, mesaCodigoQr: action.mesaCodigoQr, tipoEntrega: action.tipoEntrega };
     }
     case "ADD_ITEM": {
-      const existente = state.items.find(
-        (i) => i.itemId === action.item.itemId && i.notas === action.item.notas
-      );
+      const claveNueva = claveLineaCarrito(action.item);
+      const existente = state.items.find((i) => claveLineaCarrito(i) === claveNueva);
       if (existente) {
         return {
           ...state,
@@ -69,11 +79,11 @@ function reducer(state: CartState, action: CartAction): CartState {
         ...state,
         items:
           action.cantidad <= 0
-            ? state.items.filter((i) => i.itemId !== action.itemId)
-            : state.items.map((i) => (i.itemId === action.itemId ? { ...i, cantidad: action.cantidad } : i)),
+            ? state.items.filter((i) => claveLineaCarrito(i) !== action.clave)
+            : state.items.map((i) => (claveLineaCarrito(i) === action.clave ? { ...i, cantidad: action.cantidad } : i)),
       };
     case "REMOVE_ITEM":
-      return { ...state, items: state.items.filter((i) => i.itemId !== action.itemId) };
+      return { ...state, items: state.items.filter((i) => claveLineaCarrito(i) !== action.clave) };
     case "CLEAR":
       return { ...state, items: [] };
     default:
@@ -81,12 +91,17 @@ function reducer(state: CartState, action: CartAction): CartState {
   }
 }
 
+function subtotalItem(item: CartItem): number {
+  const extras = (item.modificadores ?? []).reduce((acc, m) => acc + Number(m.precioExtra), 0);
+  return (Number(item.precioUnitario) + extras) * item.cantidad;
+}
+
 interface CartContextValue {
   state: CartState;
   setContexto: (restauranteSlug: string, mesaCodigoQr: string, tipoEntrega: "mesa" | "retiro") => void;
   addItem: (item: CartItem) => void;
-  updateCantidad: (itemId: number, cantidad: number) => void;
-  removeItem: (itemId: number) => void;
+  updateCantidad: (clave: string, cantidad: number) => void;
+  removeItem: (clave: string) => void;
   clear: () => void;
   total: number;
 }
@@ -100,10 +115,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const total = useMemo(
-    () => state.items.reduce((acc, i) => acc + Number(i.precioUnitario) * i.cantidad, 0),
-    [state.items]
-  );
+  const total = useMemo(() => state.items.reduce((acc, i) => acc + subtotalItem(i), 0), [state.items]);
 
   const setContexto = useCallback(
     (restauranteSlug: string, mesaCodigoQr: string, tipoEntrega: "mesa" | "retiro") =>
@@ -112,10 +124,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
   const addItem = useCallback((item: CartItem) => dispatch({ type: "ADD_ITEM", item }), []);
   const updateCantidad = useCallback(
-    (itemId: number, cantidad: number) => dispatch({ type: "UPDATE_CANTIDAD", itemId, cantidad }),
+    (clave: string, cantidad: number) => dispatch({ type: "UPDATE_CANTIDAD", clave, cantidad }),
     []
   );
-  const removeItem = useCallback((itemId: number) => dispatch({ type: "REMOVE_ITEM", itemId }), []);
+  const removeItem = useCallback((clave: string) => dispatch({ type: "REMOVE_ITEM", clave }), []);
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
   const value: CartContextValue = useMemo(

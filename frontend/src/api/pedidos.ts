@@ -33,7 +33,12 @@ export function crearPedido(slug: string, input: CrearPedidoInput) {
     mesa_codigo_qr: input.mesaCodigoQr,
     cliente: input.cliente,
     metodo_pago: input.metodoPago,
-    items: input.items.map((i) => ({ item_id: i.itemId, cantidad: i.cantidad, notas: i.notas })),
+    items: input.items.map((i) => ({
+      item_id: i.itemId,
+      cantidad: i.cantidad,
+      notas: i.notas,
+      modificador_ids: (i.modificadores ?? []).map((m) => m.modificadorId),
+    })),
     payment_intent_id: input.paymentIntentId,
   });
 }

@@ -39,6 +39,7 @@ export function OrderStatusPage() {
         {pedido.items.map((item) => (
           <div key={item.id}>
             {item.cantidad}× {item.nombre}
+            {item.modificadores.length > 0 && ` (${item.modificadores.map((m) => m.nombre).join(", ")})`}
             {item.notas ? ` (${item.notas})` : ""}
           </div>
         ))}

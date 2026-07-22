@@ -7,9 +7,11 @@ from app.routers import (
     categorias,
     clientes_publico,
     cocina_ws,
+    ingredientes,
     items,
     menu_publico,
     mesas,
+    modificadores,
     pagos,
     pedidos,
     restaurantes,
@@ -29,6 +31,8 @@ app.include_router(auth.router)
 app.include_router(restaurantes.router)
 app.include_router(categorias.router)
 app.include_router(items.router)
+app.include_router(ingredientes.router)
+app.include_router(modificadores.router)
 app.include_router(mesas.router)
 app.include_router(menu_publico.router)
 app.include_router(clientes_publico.router)

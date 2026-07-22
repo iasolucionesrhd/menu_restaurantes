@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useCart } from "../../context/CartContext";
+import { useCart, claveLineaCarrito } from "../../context/CartContext";
 import { getMenuPublico } from "../../api/menu";
 import { crearPedido, type ClienteInput } from "../../api/pedidos";
 import { CustomerForm } from "../../components/checkout/CustomerForm";
@@ -77,11 +77,19 @@ export function CheckoutPage() {
     <div className="checkout-page">
       <h2>Checkout</h2>
       <div className="checkout-resumen">
-        {state.items.map((item) => (
-          <div key={`${item.itemId}-${item.notas ?? ""}`}>
-            {item.cantidad}× {item.nombre} — {formatMoney(Number(item.precioUnitario) * item.cantidad)}
-          </div>
-        ))}
+        {state.items.map((item) => {
+          const extras = (item.modificadores ?? []).reduce((acc, m) => acc + Number(m.precioExtra), 0);
+          return (
+            <div key={claveLineaCarrito(item)}>
+              {item.cantidad}× {item.nombre}
+              {item.modificadores && item.modificadores.length > 0
+                ? ` (${item.modificadores.map((m) => m.nombre).join(", ")})`
+                : ""}
+              {" — "}
+              {formatMoney((Number(item.precioUnitario) + extras) * item.cantidad)}
+            </div>
+          );
+        })}
         <p>
           <strong>Total: {formatMoney(total)}</strong>
         </p>

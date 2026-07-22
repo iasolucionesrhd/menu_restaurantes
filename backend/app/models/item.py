@@ -19,3 +19,7 @@ class Item(Base):
 
     restaurante: Mapped["Restaurante"] = relationship(back_populates="items")
     categoria: Mapped["Categoria"] = relationship(back_populates="items")
+    ingredientes: Mapped[list["ItemIngrediente"]] = relationship(back_populates="item", cascade="all, delete-orphan")
+    modificador_grupos: Mapped[list["ModificadorGrupo"]] = relationship(
+        back_populates="item", cascade="all, delete-orphan", order_by="ModificadorGrupo.id"
+    )

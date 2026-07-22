@@ -13,7 +13,13 @@ from app.models.usuario import Usuario
 from app.schemas.pedido import ActualizarEstadoRequest, PedidoCreateRequest, PedidoOut
 from app.schemas.ws_messages import EstadoActualizadoMessage, NuevoPedidoMessage
 from app.security import verify_password
-from app.services.pedido_service import crear_pedido, generar_nota_credito, pedido_a_out, transicionar_estado
+from app.services.pedido_service import (
+    crear_pedido,
+    generar_nota_credito,
+    pedido_a_out,
+    restaurar_stock,
+    transicionar_estado,
+)
 from app.services.payments.base import PaymentAdapter
 from app.services.payments.factory import get_payment_adapter
 from app.services.ws_manager import manager
@@ -25,6 +31,7 @@ staff_router = APIRouter(prefix="/api/staff/pedidos", tags=["staff:pedidos"])
 def _load_options():
     return (
         selectinload(Pedido.items).selectinload(ItemPedido.item),
+        selectinload(Pedido.items).selectinload(ItemPedido.modificadores),
         selectinload(Pedido.cliente),
         selectinload(Pedido.mesa),
     )
@@ -117,9 +124,10 @@ async def actualizar_estado_pedido(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Código de cancelación incorrecto")
 
     pedido = await transicionar_estado(db, pedido, payload.estado)
-    if pedido.estado == EstadoPedido.CANCELADO and pedido.requiere_factura:
-        await generar_nota_credito(db, pedido)
-    await manager.broadcast(
-        restaurante_id, EstadoActualizadoMessage(pedido_id=pedido.id, estado=pedido.estado).model_dump(mode="json")
-    )
-    return pedido_a_out(pedido)
+    if pedido.estado == EstadoPedido.CANCELADO:
+        await restaurar_stock(db, [(ip.item_id, ip.cantidad) for ip in pedido.items])
+        if pedido.requiere_factura:
+            await generar_nota_credito(db, pedido)
+    pedido_out = pedido_a_out(pedido)
+    await manager.broadcast(restaurante_id, EstadoActualizadoMessage(pedido=pedido_out).model_dump(mode="json"))
+    return pedido_out
