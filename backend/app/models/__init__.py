@@ -12,6 +12,7 @@ from app.models.nota_credito import NotaCredito
 from app.models.pedido import Pedido
 from app.models.restaurante import Restaurante
 from app.models.usuario import Usuario
+from app.models.usuario_restaurante import UsuarioRestaurante
 
 __all__ = [
     "Categoria",
@@ -28,4 +29,5 @@ __all__ = [
     "Pedido",
     "Restaurante",
     "Usuario",
+    "UsuarioRestaurante",
 ]

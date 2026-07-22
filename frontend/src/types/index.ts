@@ -103,3 +103,9 @@ export interface ResumenCaja {
   cobrado_hoy: string;
   pedidos_cobrados_hoy: number;
 }
+
+export interface Sucursal {
+  id: number;
+  nombre: string;
+  slug: string;
+}

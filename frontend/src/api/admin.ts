@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { Rol } from "../types";
+import type { Rol, Sucursal } from "../types";
 
 export interface Categoria {
   id: number;
@@ -112,4 +112,6 @@ export const adminApi = {
   createUsuario: (data: { email: string; password: string; rol: Rol }) =>
     api.post<UsuarioStaff>("/admin/usuarios", data),
   deleteUsuario: (id: number) => api.delete<void>(`/admin/usuarios/${id}`),
+
+  createSucursal: (data: { nombre: string; slug: string }) => api.post<Sucursal>("/admin/sucursales", data),
 };

@@ -16,6 +16,7 @@ from app.routers import (
     pagos,
     pedidos,
     restaurantes,
+    sucursales,
     usuarios,
 )
 
@@ -31,6 +32,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(restaurantes.router)
+app.include_router(sucursales.auth_router)
+app.include_router(sucursales.admin_router)
 app.include_router(usuarios.router)
 app.include_router(categorias.router)
 app.include_router(items.router)

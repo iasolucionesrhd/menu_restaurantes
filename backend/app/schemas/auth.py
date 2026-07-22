@@ -22,3 +22,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     usuario: UsuarioOut
+
+
+class CambiarRestauranteRequest(BaseModel):
+    restaurante_id: int

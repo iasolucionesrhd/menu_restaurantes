@@ -15,29 +15,36 @@ from app.security import decode_access_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
-async def get_current_usuario(
-    token: str | None = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> Usuario:
-    credentials_error = HTTPException(
+def _credentials_error() -> HTTPException:
+    return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales inválidas o expiradas",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def _decode_or_401(token: str | None) -> dict:
     if token is None:
-        raise credentials_error
+        raise _credentials_error()
     try:
-        payload = decode_access_token(token)
+        return decode_access_token(token)
     except jwt.PyJWTError:
-        raise credentials_error
+        raise _credentials_error()
+
+
+async def get_current_usuario(
+    token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Usuario:
+    payload = _decode_or_401(token)
 
     usuario_id = payload.get("sub")
     if usuario_id is None:
-        raise credentials_error
+        raise _credentials_error()
 
     usuario = await db.get(Usuario, int(usuario_id))
     if usuario is None:
-        raise credentials_error
+        raise _credentials_error()
     return usuario
 
 
@@ -50,8 +57,16 @@ def require_role(*roles: RolUsuario) -> Callable:
     return dependency
 
 
-async def get_current_restaurante_id(usuario: Usuario = Depends(get_current_usuario)) -> int:
-    return usuario.restaurante_id
+async def get_current_restaurante_id(token: str | None = Depends(oauth2_scheme)) -> int:
+    # Viene del claim del JWT, no de la fila de Usuario en BD: así "cambiar de
+    # sucursal" (ver routers/sucursales.py) solo implica emitir un token nuevo,
+    # sin tener que mutar ninguna fila. usuario.restaurante_id en BD sigue
+    # siendo la sucursal "de origen" de esa cuenta, no la activa en la sesión.
+    payload = _decode_or_401(token)
+    restaurante_id = payload.get("restaurante_id")
+    if restaurante_id is None:
+        raise _credentials_error()
+    return restaurante_id
 
 
 async def get_restaurante_by_slug(slug: str, db: AsyncSession = Depends(get_db)) -> Restaurante:

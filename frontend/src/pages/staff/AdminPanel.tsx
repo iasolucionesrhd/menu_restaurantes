@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { listarMisRestaurantes } from "../../api/auth";
 import {
   adminApi,
   type Categoria,
@@ -10,9 +11,9 @@ import {
   type UsuarioStaff,
 } from "../../api/admin";
 import { MesaQrImage } from "../../components/admin/MesaQrImage";
-import type { Rol } from "../../types";
+import type { Rol, Sucursal } from "../../types";
 
-type Tab = "categorias" | "items" | "mesas" | "ingredientes" | "personal" | "seguridad";
+type Tab = "categorias" | "items" | "mesas" | "ingredientes" | "personal" | "sucursales" | "seguridad";
 
 const ETIQUETA_ROL: Record<Rol, string> = {
   admin: "Admin",
@@ -592,6 +593,89 @@ function IngredientesTab() {
   );
 }
 
+function SucursalesTab() {
+  const { usuario, cambiarSucursal } = useAuth();
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [form, setForm] = useState({ nombre: "", slug: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [cambiando, setCambiando] = useState(false);
+
+  const cargar = () => listarMisRestaurantes().then(setSucursales);
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const crear = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!form.nombre.trim() || !form.slug.trim()) return;
+    try {
+      await adminApi.createSucursal({ nombre: form.nombre.trim(), slug: form.slug.trim() });
+      setForm({ nombre: "", slug: "" });
+      cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo crear la sucursal");
+    }
+  };
+
+  const cambiar = async (id: number) => {
+    setCambiando(true);
+    try {
+      await cambiarSucursal(id);
+    } finally {
+      setCambiando(false);
+    }
+  };
+
+  return (
+    <div>
+      <p>Cada sucursal tiene su propio menú, mesas y pedidos, totalmente independientes entre sí.</p>
+      <form className="admin-form-inline" onSubmit={crear}>
+        <input
+          placeholder="Nombre de la sucursal"
+          value={form.nombre}
+          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+        />
+        <input
+          placeholder="slug-url (ej. sucursal-cartago)"
+          value={form.slug}
+          onChange={(e) => setForm({ ...form, slug: e.target.value })}
+        />
+        <button type="submit" className="btn-primario">
+          Crear sucursal
+        </button>
+      </form>
+      {error && <p className="estado-error">{error}</p>}
+      <table className="admin-tabla">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Slug</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sucursales.map((s) => (
+            <tr key={s.id}>
+              <td>{s.nombre}</td>
+              <td>{s.slug}</td>
+              <td>
+                {s.slug === usuario?.restaurante_slug ? (
+                  <strong>Activa</strong>
+                ) : (
+                  <button type="button" className="btn-secundario" disabled={cambiando} onClick={() => cambiar(s.id)}>
+                    Cambiar a esta
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function PersonalTab() {
   const [usuarios, setUsuarios] = useState<UsuarioStaff[]>([]);
   const [form, setForm] = useState<{ email: string; password: string; rol: Rol }>({
@@ -739,6 +823,9 @@ export function AdminPanel() {
         <button type="button" className="btn-secundario" onClick={() => setTab("personal")}>
           Personal
         </button>
+        <button type="button" className="btn-secundario" onClick={() => setTab("sucursales")}>
+          Sucursales
+        </button>
         <button type="button" className="btn-secundario" onClick={() => setTab("seguridad")}>
           Seguridad
         </button>
@@ -749,6 +836,7 @@ export function AdminPanel() {
       {tab === "categorias" && <CategoriasTab />}
       {tab === "items" && <ItemsTab />}
       {tab === "personal" && <PersonalTab />}
+      {tab === "sucursales" && <SucursalesTab />}
       {tab === "mesas" && <MesasTab />}
       {tab === "ingredientes" && <IngredientesTab />}
       {tab === "seguridad" && <SeguridadTab />}

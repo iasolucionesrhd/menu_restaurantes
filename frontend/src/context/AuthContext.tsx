@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Usuario } from "../types";
-import { login as loginRequest } from "../api/auth";
+import { login as loginRequest, cambiarRestaurante } from "../api/auth";
 
 interface AuthContextValue {
   usuario: Usuario | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  cambiarSucursal: (restauranteId: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,7 +32,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
   };
 
-  return <AuthContext.Provider value={{ usuario, login, logout }}>{children}</AuthContext.Provider>;
+  const cambiarSucursal = async (restauranteId: number) => {
+    const { access_token, usuario: u } = await cambiarRestaurante(restauranteId);
+    localStorage.setItem("access_token", access_token);
+    localStorage.setItem("usuario", JSON.stringify(u));
+    setUsuario(u);
+  };
+
+  return (
+    <AuthContext.Provider value={{ usuario, login, logout, cambiarSucursal }}>{children}</AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {
