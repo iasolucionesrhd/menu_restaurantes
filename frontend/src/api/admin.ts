@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { Rol } from "../types";
 
 export interface Categoria {
   id: number;
@@ -54,6 +55,12 @@ export interface Mesa {
   codigo_qr: string;
 }
 
+export interface UsuarioStaff {
+  id: number;
+  email: string;
+  rol: Rol;
+}
+
 export interface RestauranteConfig {
   id: number;
   nombre: string;
@@ -100,4 +107,9 @@ export const adminApi = {
   getRestaurante: () => api.get<RestauranteConfig>("/admin/restaurante"),
   setPinCancelacion: (pin: string) =>
     api.patch<RestauranteConfig>("/admin/restaurante", { pin_cancelacion: pin }),
+
+  listUsuarios: () => api.get<UsuarioStaff[]>("/admin/usuarios"),
+  createUsuario: (data: { email: string; password: string; rol: Rol }) =>
+    api.post<UsuarioStaff>("/admin/usuarios", data),
+  deleteUsuario: (id: number) => api.delete<void>(`/admin/usuarios/${id}`),
 };

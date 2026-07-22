@@ -77,6 +77,7 @@ export interface Pedido {
   id: number;
   estado: EstadoPedido;
   metodo_pago: MetodoPago;
+  pagado: boolean;
   monto_total: string;
   tipo_entrega: "mesa" | "retiro";
   mesa_numero: number | null;
@@ -88,7 +89,7 @@ export interface Pedido {
   items: ItemPedido[];
 }
 
-export type Rol = "admin" | "cocina";
+export type Rol = "admin" | "cocina" | "mesero" | "cajero";
 
 export interface Usuario {
   id: number;
@@ -96,4 +97,9 @@ export interface Usuario {
   rol: Rol;
   restaurante_id: number;
   restaurante_slug: string;
+}
+
+export interface ResumenCaja {
+  cobrado_hoy: string;
+  pedidos_cobrados_hoy: number;
 }

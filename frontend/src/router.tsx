@@ -5,6 +5,8 @@ import { OrderStatusPage } from "./pages/public/OrderStatusPage";
 import { LoginPage } from "./pages/staff/LoginPage";
 import { KitchenScreen } from "./pages/staff/KitchenScreen";
 import { AdminPanel } from "./pages/staff/AdminPanel";
+import { MeseroScreen } from "./pages/staff/MeseroScreen";
+import { CajaScreen } from "./pages/staff/CajaScreen";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RequireAuth } from "./components/RequireAuth";
 
@@ -29,6 +31,22 @@ export function AppRouter() {
         element={
           <RequireAuth roles={["admin"]}>
             <AdminPanel />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/mesero"
+        element={
+          <RequireAuth roles={["admin", "mesero"]}>
+            <MeseroScreen />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/caja"
+        element={
+          <RequireAuth roles={["admin", "cajero"]}>
+            <CajaScreen />
           </RequireAuth>
         }
       />

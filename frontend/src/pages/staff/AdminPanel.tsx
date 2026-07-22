@@ -7,10 +7,19 @@ import {
   type Item,
   type Mesa,
   type RestauranteConfig,
+  type UsuarioStaff,
 } from "../../api/admin";
 import { MesaQrImage } from "../../components/admin/MesaQrImage";
+import type { Rol } from "../../types";
 
-type Tab = "categorias" | "items" | "mesas" | "ingredientes" | "seguridad";
+type Tab = "categorias" | "items" | "mesas" | "ingredientes" | "personal" | "seguridad";
+
+const ETIQUETA_ROL: Record<Rol, string> = {
+  admin: "Admin",
+  cocina: "Cocina",
+  mesero: "Mesero",
+  cajero: "Cajero",
+};
 
 function CategoriasTab() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -583,6 +592,89 @@ function IngredientesTab() {
   );
 }
 
+function PersonalTab() {
+  const [usuarios, setUsuarios] = useState<UsuarioStaff[]>([]);
+  const [form, setForm] = useState<{ email: string; password: string; rol: Rol }>({
+    email: "",
+    password: "",
+    rol: "mesero",
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const cargar = () => adminApi.listUsuarios().then(setUsuarios);
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const crear = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!form.email.trim() || !form.password.trim()) return;
+    try {
+      await adminApi.createUsuario({ email: form.email.trim(), password: form.password, rol: form.rol });
+      setForm({ email: "", password: "", rol: "mesero" });
+      cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo crear el usuario");
+    }
+  };
+
+  return (
+    <div>
+      <form className="admin-form-inline" onSubmit={crear}>
+        <input
+          type="email"
+          placeholder="Correo"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
+        <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value as Rol })}>
+          <option value="mesero">Mesero</option>
+          <option value="cajero">Cajero</option>
+          <option value="cocina">Cocina</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit" className="btn-primario">
+          Crear usuario
+        </button>
+      </form>
+      {error && <p className="estado-error">{error}</p>}
+      <table className="admin-tabla">
+        <thead>
+          <tr>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuarios.map((u) => (
+            <tr key={u.id}>
+              <td>{u.email}</td>
+              <td>{ETIQUETA_ROL[u.rol]}</td>
+              <td>
+                <button
+                  type="button"
+                  className="btn-secundario"
+                  onClick={() => adminApi.deleteUsuario(u.id).then(cargar)}
+                >
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SeguridadTab() {
   const [config, setConfig] = useState<RestauranteConfig | null>(null);
   const [pin, setPin] = useState("");
@@ -644,6 +736,9 @@ export function AdminPanel() {
         <button type="button" className="btn-secundario" onClick={() => setTab("ingredientes")}>
           Ingredientes
         </button>
+        <button type="button" className="btn-secundario" onClick={() => setTab("personal")}>
+          Personal
+        </button>
         <button type="button" className="btn-secundario" onClick={() => setTab("seguridad")}>
           Seguridad
         </button>
@@ -653,6 +748,7 @@ export function AdminPanel() {
       </nav>
       {tab === "categorias" && <CategoriasTab />}
       {tab === "items" && <ItemsTab />}
+      {tab === "personal" && <PersonalTab />}
       {tab === "mesas" && <MesasTab />}
       {tab === "ingredientes" && <IngredientesTab />}
       {tab === "seguridad" && <SeguridadTab />}

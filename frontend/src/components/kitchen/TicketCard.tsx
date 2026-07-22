@@ -82,8 +82,8 @@ export function TicketCard({
         <span className="ticket-tiempo"> ⏱️ {transcurrido} {ETIQUETA_TIEMPO[pedido.estado]}</span>
       )}
       <div>
-        <span className={`pago-badge pago-badge-${pedido.metodo_pago === "efectivo_en_restaurante" ? "efectivo" : "pagado"}`}>
-          {ETIQUETA_PAGO[pedido.metodo_pago]}
+        <span className={`pago-badge pago-badge-${pedido.pagado ? "pagado" : "efectivo"}`}>
+          {pedido.pagado ? "✅ Pagado" : ETIQUETA_PAGO[pedido.metodo_pago]}
         </span>
       </div>
       <ul>

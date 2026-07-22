@@ -29,7 +29,13 @@ async def cocina_websocket(
         await websocket.close(code=4401)
         return
 
-    if payload.get("rol") not in (RolUsuario.ADMIN.value, RolUsuario.COCINA.value):
+    roles_permitidos = (
+        RolUsuario.ADMIN.value,
+        RolUsuario.COCINA.value,
+        RolUsuario.MESERO.value,
+        RolUsuario.CAJERO.value,
+    )
+    if payload.get("rol") not in roles_permitidos:
         await websocket.close(code=4403)
         return
     if payload.get("restaurante_id") != restaurante.id:

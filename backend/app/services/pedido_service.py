@@ -238,6 +238,7 @@ async def crear_pedido(
         cliente_id=cliente.id,
         estado=EstadoPedido.RECIBIDO,
         metodo_pago=metodo_pago,
+        pagado=metodo_pago != MetodoPago.EFECTIVO_EN_RESTAURANTE,
         monto_total=monto_total,
         tilopay_transaction_id=tilopay_transaction_id,
         tipo_entrega=tipo_entrega,
@@ -283,6 +284,12 @@ async def transicionar_estado(db: AsyncSession, pedido: Pedido, nuevo_estado: Es
     return pedido
 
 
+async def marcar_pagado(db: AsyncSession, pedido: Pedido) -> Pedido:
+    pedido.pagado = True
+    await db.commit()
+    return pedido
+
+
 async def generar_nota_credito(db: AsyncSession, pedido: Pedido) -> NotaCredito:
     """Registro interno de cancelación de un pedido facturado (stub, sin envío a Hacienda)."""
     nota = NotaCredito(
@@ -303,6 +310,7 @@ def pedido_a_out(pedido: Pedido) -> "PedidoOut":
         id=pedido.id,
         estado=pedido.estado,
         metodo_pago=pedido.metodo_pago,
+        pagado=pedido.pagado,
         monto_total=pedido.monto_total,
         tipo_entrega=pedido.tipo_entrega.value,
         mesa_numero=pedido.mesa.numero if pedido.mesa else None,

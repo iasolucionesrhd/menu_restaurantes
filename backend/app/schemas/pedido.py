@@ -77,6 +77,7 @@ class PedidoOut(BaseModel):
     id: int
     estado: EstadoPedido
     metodo_pago: MetodoPago
+    pagado: bool
     monto_total: Decimal
     tipo_entrega: str
     mesa_numero: int | None
@@ -98,3 +99,21 @@ class PedidoOut(BaseModel):
 class ActualizarEstadoRequest(BaseModel):
     estado: EstadoPedido
     pin: str | None = None
+
+
+class PedidoAsistidoCreateRequest(BaseModel):
+    mesa_id: int
+    cliente_nombre: str
+    items: list[ItemPedidoCreate]
+
+    @field_validator("cliente_nombre")
+    @classmethod
+    def nombre_no_vacio(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("El nombre del cliente no puede estar vacío")
+        return v
+
+
+class ResumenCajaOut(BaseModel):
+    cobrado_hoy: Decimal
+    pedidos_cobrados_hoy: int

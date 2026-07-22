@@ -24,6 +24,10 @@ class Pedido(Base):
         Enum(MetodoPago, name="metodo_pago", native_enum=True, values_callable=lambda obj: [e.value for e in obj])
     )
     monto_total: Mapped[float] = mapped_column(Numeric(10, 2))
+    # tarjeta/sinpe/apple_pay quedan pagado=True desde que se crean (el pago
+    # ya se verificó contra el adaptador); efectivo_en_restaurante empieza
+    # en False hasta que cajero lo marca al recibir el dinero.
+    pagado: Mapped[bool] = mapped_column(Boolean, default=False)
     tilopay_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tipo_entrega: Mapped[TipoEntrega] = mapped_column(
         Enum(TipoEntrega, name="tipo_entrega", native_enum=True, values_callable=lambda obj: [e.value for e in obj])

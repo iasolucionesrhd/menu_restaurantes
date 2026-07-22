@@ -10,8 +10,15 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
+  const RUTA_POR_ROL: Record<string, string> = {
+    admin: "/admin",
+    cocina: "/cocina",
+    mesero: "/mesero",
+    cajero: "/caja",
+  };
+
   if (usuario) {
-    return <Navigate to={usuario.rol === "admin" ? "/admin" : "/cocina"} replace />;
+    return <Navigate to={RUTA_POR_ROL[usuario.rol] ?? "/login"} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

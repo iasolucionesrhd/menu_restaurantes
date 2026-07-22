@@ -11,10 +11,12 @@ from app.routers import (
     items,
     menu_publico,
     mesas,
+    mesero,
     modificadores,
     pagos,
     pedidos,
     restaurantes,
+    usuarios,
 )
 
 app = FastAPI(title="Menú Digital QR")
@@ -29,6 +31,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(restaurantes.router)
+app.include_router(usuarios.router)
 app.include_router(categorias.router)
 app.include_router(items.router)
 app.include_router(ingredientes.router)
@@ -39,6 +42,7 @@ app.include_router(clientes_publico.router)
 app.include_router(pagos.router)
 app.include_router(pedidos.public_router)
 app.include_router(pedidos.staff_router)
+app.include_router(mesero.router)
 app.include_router(cocina_ws.router)
 
 
