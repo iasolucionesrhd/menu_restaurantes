@@ -22,6 +22,14 @@ export interface Mesa {
   codigo_qr: string;
 }
 
+export interface RestauranteConfig {
+  id: number;
+  nombre: string;
+  slug: string;
+  tilopay_configurado: boolean;
+  pin_cancelacion_configurado: boolean;
+}
+
 export const adminApi = {
   listCategorias: () => api.get<Categoria[]>("/admin/categorias"),
   createCategoria: (nombre: string, orden: number) => api.post<Categoria>("/admin/categorias", { nombre, orden }),
@@ -37,4 +45,8 @@ export const adminApi = {
   listMesas: () => api.get<Mesa[]>("/admin/mesas"),
   createMesa: (numero: number | null) => api.post<Mesa>("/admin/mesas", { numero }),
   deleteMesa: (id: number) => api.delete<void>(`/admin/mesas/${id}`),
+
+  getRestaurante: () => api.get<RestauranteConfig>("/admin/restaurante"),
+  setPinCancelacion: (pin: string) =>
+    api.patch<RestauranteConfig>("/admin/restaurante", { pin_cancelacion: pin }),
 };

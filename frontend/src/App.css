@@ -342,6 +342,42 @@ input {
   color: var(--text);
 }
 
+.btn-peligro {
+  background: transparent;
+  border: 1px solid #d33;
+  border-radius: 8px;
+  padding: 10px 18px;
+  color: #d33;
+}
+
+.ticket-card-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ticket-cancelar-form {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #d33;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ticket-cancelar-form input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.ticket-cancelar-error {
+  color: #d33;
+  font-size: 13px;
+  margin: 0;
+}
+
 /* Admin panel */
 
 .admin-panel {

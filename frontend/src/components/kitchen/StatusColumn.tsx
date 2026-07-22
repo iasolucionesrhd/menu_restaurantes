@@ -5,10 +5,12 @@ export function StatusColumn({
   titulo,
   pedidos,
   onAvanzar,
+  onCancelar,
 }: {
   titulo: string;
   pedidos: Pedido[];
   onAvanzar: (pedidoId: number, estado: EstadoPedido) => void;
+  onCancelar: (pedidoId: number, pin?: string) => Promise<void>;
 }) {
   return (
     <div className="kitchen-columna">
@@ -16,7 +18,7 @@ export function StatusColumn({
         {titulo} ({pedidos.length})
       </h3>
       {pedidos.map((pedido) => (
-        <TicketCard key={pedido.id} pedido={pedido} onAvanzar={onAvanzar} />
+        <TicketCard key={pedido.id} pedido={pedido} onAvanzar={onAvanzar} onCancelar={onCancelar} />
       ))}
     </div>
   );

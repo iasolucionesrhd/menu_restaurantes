@@ -9,6 +9,7 @@ from app.models.cliente import Cliente
 from app.models.item import Item
 from app.models.item_pedido import ItemPedido
 from app.models.mesa import Mesa
+from app.models.nota_credito import NotaCredito
 from app.models.pedido import Pedido
 from app.models.restaurante import Restaurante
 from app.schemas.pedido import ClienteCreate, ItemPedidoCreate
@@ -192,6 +193,19 @@ async def transicionar_estado(db: AsyncSession, pedido: Pedido, nuevo_estado: Es
     pedido.estado = nuevo_estado
     await db.commit()
     return pedido
+
+
+async def generar_nota_credito(db: AsyncSession, pedido: Pedido) -> NotaCredito:
+    """Registro interno de cancelación de un pedido facturado (stub, sin envío a Hacienda)."""
+    nota = NotaCredito(
+        restaurante_id=pedido.restaurante_id,
+        pedido_id=pedido.id,
+        monto=pedido.monto_total,
+        motivo="Cancelación de pedido facturado",
+    )
+    db.add(nota)
+    await db.commit()
+    return nota
 
 
 def pedido_a_out(pedido: Pedido) -> "PedidoOut":

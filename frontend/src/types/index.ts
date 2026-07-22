@@ -54,6 +54,7 @@ export interface Pedido {
   mesa_numero: number | null;
   cliente_nombre: string;
   creado_en: string;
+  requiere_factura: boolean;
   items: ItemPedido[];
 }
 

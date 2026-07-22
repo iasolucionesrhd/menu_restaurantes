@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { adminApi, type Categoria, type Item, type Mesa } from "../../api/admin";
+import { adminApi, type Categoria, type Item, type Mesa, type RestauranteConfig } from "../../api/admin";
 import { MesaQrImage } from "../../components/admin/MesaQrImage";
 
-type Tab = "categorias" | "items" | "mesas";
+type Tab = "categorias" | "items" | "mesas" | "seguridad";
 
 function CategoriasTab() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -226,6 +226,47 @@ function MesasTab() {
   );
 }
 
+function SeguridadTab() {
+  const [config, setConfig] = useState<RestauranteConfig | null>(null);
+  const [pin, setPin] = useState("");
+  const [mensaje, setMensaje] = useState<string | null>(null);
+
+  const cargar = () => adminApi.getRestaurante().then(setConfig);
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const guardar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pin.trim()) return;
+    await adminApi.setPinCancelacion(pin.trim());
+    setPin("");
+    setMensaje("Código de cancelación actualizado.");
+    cargar();
+  };
+
+  return (
+    <div>
+      <p>
+        Código que el personal de cocina debe ingresar para cancelar un pedido. El admin no lo necesita.
+        {config && (config.pin_cancelacion_configurado ? " Ya hay un código configurado." : " Aún no hay ningún código configurado.")}
+      </p>
+      <form className="admin-form-inline" onSubmit={guardar}>
+        <input
+          type="password"
+          placeholder="Nuevo código de cancelación"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+        />
+        <button type="submit" className="btn-primario">
+          Guardar
+        </button>
+      </form>
+      {mensaje && <p>{mensaje}</p>}
+    </div>
+  );
+}
+
 export function AdminPanel() {
   const { logout } = useAuth();
   const [tab, setTab] = useState<Tab>("categorias");
@@ -243,6 +284,9 @@ export function AdminPanel() {
         <button type="button" className="btn-secundario" onClick={() => setTab("mesas")}>
           Mesas
         </button>
+        <button type="button" className="btn-secundario" onClick={() => setTab("seguridad")}>
+          Seguridad
+        </button>
         <button type="button" className="btn-secundario" onClick={logout} style={{ marginLeft: "auto" }}>
           Cerrar sesión
         </button>
@@ -250,6 +294,7 @@ export function AdminPanel() {
       {tab === "categorias" && <CategoriasTab />}
       {tab === "items" && <ItemsTab />}
       {tab === "mesas" && <MesasTab />}
+      {tab === "seguridad" && <SeguridadTab />}
     </div>
   );
 }

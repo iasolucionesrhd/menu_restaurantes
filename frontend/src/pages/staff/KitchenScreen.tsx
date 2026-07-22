@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useKitchenSocket } from "../../hooks/useKitchenSocket";
-import { listarPedidosStaff, actualizarEstadoPedido } from "../../api/staff";
+import { listarPedidosStaff, actualizarEstadoPedido, cancelarPedido } from "../../api/staff";
 import { StatusColumn } from "../../components/kitchen/StatusColumn";
 import type { EstadoPedido, Pedido } from "../../types";
 
@@ -32,6 +32,10 @@ export function KitchenScreen() {
     await actualizarEstadoPedido(pedidoId, estado);
   };
 
+  const cancelar = async (pedidoId: number, pin?: string) => {
+    await cancelarPedido(pedidoId, pin);
+  };
+
   if (cargando) {
     return <p className="estado-carga">Cargando pedidos...</p>;
   }
@@ -48,13 +52,20 @@ export function KitchenScreen() {
           titulo="Recibido"
           pedidos={pedidos.filter((p) => p.estado === "recibido")}
           onAvanzar={avanzar}
+          onCancelar={cancelar}
         />
         <StatusColumn
           titulo="En cocina"
           pedidos={pedidos.filter((p) => p.estado === "en_cocina")}
           onAvanzar={avanzar}
+          onCancelar={cancelar}
         />
-        <StatusColumn titulo="Listo" pedidos={pedidos.filter((p) => p.estado === "listo")} onAvanzar={avanzar} />
+        <StatusColumn
+          titulo="Listo"
+          pedidos={pedidos.filter((p) => p.estado === "listo")}
+          onAvanzar={avanzar}
+          onCancelar={cancelar}
+        />
       </div>
     </div>
   );

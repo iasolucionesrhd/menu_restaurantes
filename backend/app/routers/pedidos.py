@@ -4,14 +4,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.deps import get_current_restaurante_id, get_restaurante_by_slug, require_role
+from app.deps import get_current_restaurante_id, get_current_usuario, get_restaurante_by_slug, require_role
 from app.enums import EstadoPedido, RolUsuario
 from app.models.item_pedido import ItemPedido
 from app.models.pedido import Pedido
 from app.models.restaurante import Restaurante
+from app.models.usuario import Usuario
 from app.schemas.pedido import ActualizarEstadoRequest, PedidoCreateRequest, PedidoOut
 from app.schemas.ws_messages import EstadoActualizadoMessage, NuevoPedidoMessage
-from app.services.pedido_service import crear_pedido, pedido_a_out, transicionar_estado
+from app.security import verify_password
+from app.services.pedido_service import crear_pedido, generar_nota_credito, pedido_a_out, transicionar_estado
 from app.services.payments.base import PaymentAdapter
 from app.services.payments.factory import get_payment_adapter
 from app.services.ws_manager import manager
@@ -92,6 +94,7 @@ async def actualizar_estado_pedido(
     pedido_id: int,
     payload: ActualizarEstadoRequest,
     db: AsyncSession = Depends(get_db),
+    usuario: Usuario = Depends(get_current_usuario),
     restaurante_id: int = Depends(get_current_restaurante_id),
 ) -> PedidoOut:
     result = await db.execute(
@@ -103,7 +106,19 @@ async def actualizar_estado_pedido(
     if pedido is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
 
+    if payload.estado == EstadoPedido.CANCELADO and usuario.rol == RolUsuario.COCINA:
+        restaurante = await db.get(Restaurante, restaurante_id)
+        if not restaurante.pin_cancelacion_hash:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El administrador aún no configuró un código de cancelación",
+            )
+        if not payload.pin or not verify_password(payload.pin, restaurante.pin_cancelacion_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Código de cancelación incorrecto")
+
     pedido = await transicionar_estado(db, pedido, payload.estado)
+    if pedido.estado == EstadoPedido.CANCELADO and pedido.requiere_factura:
+        await generar_nota_credito(db, pedido)
     await manager.broadcast(
         restaurante_id, EstadoActualizadoMessage(pedido_id=pedido.id, estado=pedido.estado).model_dump(mode="json")
     )

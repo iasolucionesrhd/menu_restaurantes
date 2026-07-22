@@ -18,6 +18,11 @@ class Restaurante(Base):
     tilopay_usuario_api: Mapped[str | None] = mapped_column(EncryptedString(500))
     tilopay_password_api: Mapped[str | None] = mapped_column(EncryptedString(500))
 
+    # Código que el personal de cocina debe ingresar para cancelar un pedido
+    # (el admin no lo necesita). Se guarda con el mismo hash de una sola vía
+    # que las contraseñas, nunca en texto plano.
+    pin_cancelacion_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     usuarios: Mapped[list["Usuario"]] = relationship(back_populates="restaurante", cascade="all, delete-orphan")

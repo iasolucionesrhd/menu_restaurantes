@@ -84,3 +84,4 @@ class PedidoOut(BaseModel):
 
 class ActualizarEstadoRequest(BaseModel):
     estado: EstadoPedido
+    pin: str | None = None

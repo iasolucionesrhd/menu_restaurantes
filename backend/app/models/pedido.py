@@ -49,3 +49,6 @@ class Pedido(Base):
     mesa: Mapped["Mesa | None"] = relationship(back_populates="pedidos")
     cliente: Mapped["Cliente"] = relationship(back_populates="pedidos")
     items: Mapped[list["ItemPedido"]] = relationship(back_populates="pedido", cascade="all, delete-orphan")
+    nota_credito: Mapped["NotaCredito | None"] = relationship(
+        back_populates="pedido", cascade="all, delete-orphan", uselist=False
+    )

@@ -9,3 +9,7 @@ export function listarPedidosStaff(estados: EstadoPedido[]) {
 export function actualizarEstadoPedido(pedidoId: number, estado: EstadoPedido) {
   return api.patch<Pedido>(`/staff/pedidos/${pedidoId}/estado`, { estado });
 }
+
+export function cancelarPedido(pedidoId: number, pin?: string) {
+  return api.patch<Pedido>(`/staff/pedidos/${pedidoId}/estado`, { estado: "cancelado", pin });
+}

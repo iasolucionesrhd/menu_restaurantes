@@ -6,6 +6,7 @@ class RestauranteOut(BaseModel):
     nombre: str
     slug: str
     tilopay_configurado: bool
+    pin_cancelacion_configurado: bool
 
     model_config = {"from_attributes": True}
 
@@ -15,3 +16,4 @@ class RestauranteUpdate(BaseModel):
     tilopay_llave_api: str | None = None
     tilopay_usuario_api: str | None = None
     tilopay_password_api: str | None = None
+    pin_cancelacion: str | None = None

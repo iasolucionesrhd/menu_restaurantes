@@ -26,12 +26,13 @@ class TipoEntrega(str, Enum):
     RETIRO = "retiro"
 
 
-# Transiciones legales de estado de un Pedido. Cancelado es alcanzable desde
-# cualquier estado activo; una vez entregado/cancelado el pedido es terminal.
+# Transiciones legales de estado de un Pedido. Cancelado solo es alcanzable
+# antes de que el pedido esté listo para servir; una vez listo/entregado/
+# cancelado el pedido es terminal respecto a la cancelación.
 TRANSICIONES_ESTADO_PEDIDO: dict[EstadoPedido, set[EstadoPedido]] = {
     EstadoPedido.RECIBIDO: {EstadoPedido.EN_COCINA, EstadoPedido.CANCELADO},
     EstadoPedido.EN_COCINA: {EstadoPedido.LISTO, EstadoPedido.CANCELADO},
-    EstadoPedido.LISTO: {EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO},
+    EstadoPedido.LISTO: {EstadoPedido.ENTREGADO},
     EstadoPedido.ENTREGADO: set(),
     EstadoPedido.CANCELADO: set(),
 }
