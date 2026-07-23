@@ -6,7 +6,12 @@ from app.config import settings
 from app.enums import MetodoPago
 from app.models.restaurante import Restaurante
 from app.security import decrypt_str
-from app.services.payments.base import PaymentAdapter, PaymentIntentResult, PaymentVerificationResult
+from app.services.payments.base import (
+    PaymentAdapter,
+    PaymentAdapterUnavailable,
+    PaymentIntentResult,
+    PaymentVerificationResult,
+)
 
 
 class TilopayAdapter(PaymentAdapter):
@@ -30,20 +35,23 @@ class TilopayAdapter(PaymentAdapter):
         llave_api = decrypt_str(restaurante.tilopay_llave_api) if restaurante.tilopay_llave_api else None
         usuario_api = decrypt_str(restaurante.tilopay_usuario_api) if restaurante.tilopay_usuario_api else None
 
-        async with httpx.AsyncClient(base_url=settings.TILOPAY_API_BASE_URL) as http:
-            # TODO: reemplazar por la llamada real de Tilopay para iniciar sesión de pago.
-            response = await http.post(
-                "/api/v1/payment-intents",
-                json={
-                    "apiKey": llave_api,
-                    "apiUser": usuario_api,
-                    "amount": str(monto),
-                    "method": metodo_pago.value,
-                    "reference": referencia_externa,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(base_url=settings.TILOPAY_API_BASE_URL) as http:
+                # TODO: reemplazar por la llamada real de Tilopay para iniciar sesión de pago.
+                response = await http.post(
+                    "/api/v1/payment-intents",
+                    json={
+                        "apiKey": llave_api,
+                        "apiUser": usuario_api,
+                        "amount": str(monto),
+                        "method": metodo_pago.value,
+                        "reference": referencia_externa,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise PaymentAdapterUnavailable("No se pudo contactar a Tilopay") from exc
 
         return PaymentIntentResult(
             payment_intent_id=data.get("id", referencia_externa),
@@ -59,14 +67,17 @@ class TilopayAdapter(PaymentAdapter):
     ) -> PaymentVerificationResult:
         llave_api = decrypt_str(restaurante.tilopay_llave_api) if restaurante.tilopay_llave_api else None
 
-        async with httpx.AsyncClient(base_url=settings.TILOPAY_API_BASE_URL) as http:
-            # TODO: reemplazar por el endpoint real de verificación de transacción de Tilopay.
-            response = await http.get(
-                f"/api/v1/payment-intents/{payment_intent_id}",
-                headers={"Authorization": f"Bearer {llave_api}"},
-            )
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(base_url=settings.TILOPAY_API_BASE_URL) as http:
+                # TODO: reemplazar por el endpoint real de verificación de transacción de Tilopay.
+                response = await http.get(
+                    f"/api/v1/payment-intents/{payment_intent_id}",
+                    headers={"Authorization": f"Bearer {llave_api}"},
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise PaymentAdapterUnavailable("No se pudo contactar a Tilopay") from exc
 
         return PaymentVerificationResult(
             aprobado=data.get("status") == "approved",

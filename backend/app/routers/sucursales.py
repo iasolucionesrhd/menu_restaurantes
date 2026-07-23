@@ -2,14 +2,26 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.deps import get_current_usuario, require_role
+from app.deps import get_current_restaurante_id, get_current_usuario, require_role
 from app.enums import RolUsuario
+from app.models.categoria import Categoria
+from app.models.item import Item
+from app.models.mesa import Mesa
+from app.models.modificador_grupo import ModificadorGrupo
 from app.models.restaurante import Restaurante
 from app.models.usuario import Usuario
 from app.models.usuario_restaurante import UsuarioRestaurante
 from app.schemas.auth import CambiarRestauranteRequest, TokenResponse, UsuarioOut
+from app.schemas.evento import (
+    CategoriaEventoOut,
+    ExportacionEventoOut,
+    MesaEventoOut,
+    RestauranteEventoOut,
+    UsuarioEventoOut,
+)
 from app.schemas.restaurante import SucursalCreate, SucursalOut
 from app.security import create_access_token
 
@@ -81,3 +93,41 @@ async def crear_sucursal(
     await db.commit()
     await db.refresh(restaurante)
     return restaurante
+
+
+@admin_router.get("/exportar-datos-evento", response_model=ExportacionEventoOut)
+async def exportar_datos_evento(
+    db: AsyncSession = Depends(get_db),
+    restaurante_id: int = Depends(get_current_restaurante_id),
+) -> ExportacionEventoOut:
+    """Foto completa de la sucursal activa (menú, mesas, staff, credenciales
+    de pago) lista para cargarse en un nodo de evento nuevo con
+    scripts/importar_evento.py."""
+    restaurante = await db.get(Restaurante, restaurante_id)
+    if restaurante is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sucursal no encontrada")
+
+    categorias_result = await db.execute(
+        select(Categoria)
+        .where(Categoria.restaurante_id == restaurante_id)
+        .options(
+            selectinload(Categoria.items)
+            .selectinload(Item.modificador_grupos)
+            .selectinload(ModificadorGrupo.modificadores)
+        )
+        .order_by(Categoria.orden)
+    )
+    categorias = categorias_result.scalars().all()
+
+    mesas_result = await db.execute(select(Mesa).where(Mesa.restaurante_id == restaurante_id))
+    mesas = mesas_result.scalars().all()
+
+    usuarios_result = await db.execute(select(Usuario).where(Usuario.restaurante_id == restaurante_id))
+    usuarios = usuarios_result.scalars().all()
+
+    return ExportacionEventoOut(
+        restaurante=RestauranteEventoOut.model_validate(restaurante),
+        categorias=[CategoriaEventoOut.model_validate(c) for c in categorias],
+        mesas=[MesaEventoOut.model_validate(m) for m in mesas],
+        usuarios=[UsuarioEventoOut.model_validate(u) for u in usuarios],
+    )

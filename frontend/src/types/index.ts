@@ -58,6 +58,8 @@ export type MetodoPago = "tarjeta" | "sinpe" | "apple_pay" | "efectivo_en_restau
 
 export type EstadoPedido = "recibido" | "en_cocina" | "listo" | "entregado" | "cancelado";
 
+export type OrigenPedido = "nube" | "evento_local";
+
 export interface ItemPedidoModificador {
   nombre: string;
   precio_extra: string;
@@ -86,6 +88,7 @@ export interface Pedido {
   en_cocina_en: string | null;
   listo_en: string | null;
   requiere_factura: boolean;
+  origen: OrigenPedido;
   items: ItemPedido[];
 }
 
@@ -118,6 +121,8 @@ export interface CierreCaja {
   cantidad_apple_pay: number;
   total_general: string;
   cantidad_general: number;
+  origen: OrigenPedido;
+  sincronizado: boolean;
 }
 
 export interface Sucursal {

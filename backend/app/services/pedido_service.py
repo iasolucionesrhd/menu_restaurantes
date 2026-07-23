@@ -21,8 +21,8 @@ from app.models.nota_credito import NotaCredito
 from app.models.pedido import Pedido
 from app.models.restaurante import Restaurante
 from app.schemas.pedido import ClienteCreate, ItemPedidoCreate
-from app.services.google_auth import verify_google_id_token
-from app.services.payments.base import PaymentAdapter
+from app.services.google_auth import GoogleAuthUnavailable, verify_google_id_token
+from app.services.payments.base import PaymentAdapter, PaymentAdapterUnavailable
 
 _COLUMNAS_POR_METODO: dict[MetodoPago, tuple[str, str]] = {
     MetodoPago.EFECTIVO_EN_RESTAURANTE: ("total_efectivo", "cantidad_efectivo"),
@@ -132,10 +132,16 @@ async def crear_pedido(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El pedido no tiene items")
 
     # Verificar el token de Google primero, antes de tocar mesa/items/pago,
-    # para fallar rápido si el token es inválido.
+    # para fallar rápido si el token es inválido. Si Google es inalcanzable
+    # (sin internet, típico en un nodo de evento) se degrada a invitado en
+    # vez de reventar el pedido completo; un token genuinamente inválido sí
+    # sigue rechazándose.
     google_info = None
     if cliente_data.google_id_token:
-        google_info = await verify_google_id_token(cliente_data.google_id_token)
+        try:
+            google_info = await verify_google_id_token(cliente_data.google_id_token)
+        except GoogleAuthUnavailable:
+            google_info = None
 
     mesa, tipo_entrega = await _resolver_mesa(db, restaurante.id, mesa_codigo_qr)
 
@@ -172,9 +178,15 @@ async def crear_pedido(
     if metodo_pago != MetodoPago.EFECTIVO_EN_RESTAURANTE:
         if payment_intent_id is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Falta payment_intent_id")
-        verificacion = await adapter.verificar_transaccion(
-            restaurante=restaurante, payment_intent_id=payment_intent_id
-        )
+        try:
+            verificacion = await adapter.verificar_transaccion(
+                restaurante=restaurante, payment_intent_id=payment_intent_id
+            )
+        except PaymentAdapterUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="No se pudo confirmar el pago en línea en este momento. Intenta pagar en efectivo.",
+            ) from exc
         if not verificacion.aprobado:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="El pago no fue aprobado")
         tilopay_transaction_id = verificacion.transaction_id
@@ -385,6 +397,7 @@ def pedido_a_out(pedido: Pedido) -> "PedidoOut":
         creado_en=pedido.creado_en,
         en_cocina_en=pedido.en_cocina_en,
         listo_en=pedido.listo_en,
+        origen=pedido.origen,
         items=[
             ItemPedidoOut(
                 id=ip.id,

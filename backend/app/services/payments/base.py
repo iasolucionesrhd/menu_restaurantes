@@ -19,6 +19,11 @@ class PaymentVerificationResult:
     raw_response: dict | None = None
 
 
+class PaymentAdapterUnavailable(Exception):
+    """No se pudo contactar a la pasarela de pago (sin conectividad u otra
+    falla de red) — distinto de que la transacción se haya rechazado."""
+
+
 class PaymentAdapter(ABC):
     """Contrato único que deben cumplir todas las pasarelas de pago soportadas."""
 

@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.enums import OrigenPedido
 
 
 class CierreCaja(Base):
@@ -31,5 +32,15 @@ class CierreCaja(Base):
     cantidad_apple_pay: Mapped[int] = mapped_column(Integer, default=0)
     total_general: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     cantidad_general: Mapped[int] = mapped_column(Integer, default=0)
+
+    # NUBE para un cierre hecho normalmente; EVENTO_LOCAL para uno que se hizo
+    # en un nodo de evento y se subió (importó) a la nube después.
+    origen: Mapped[OrigenPedido] = mapped_column(
+        Enum(OrigenPedido, name="origen_pedido", native_enum=True, values_callable=lambda obj: [e.value for e in obj]),
+        default=OrigenPedido.NUBE,
+    )
+    # Solo relevante para origen=EVENTO_LOCAL: False mientras el nodo no ha
+    # podido subir este cierre a la nube (sin internet en ese momento).
+    sincronizado: Mapped[bool] = mapped_column(Boolean, default=True)
 
     pedidos: Mapped[list["Pedido"]] = relationship(back_populates="cierre_caja")

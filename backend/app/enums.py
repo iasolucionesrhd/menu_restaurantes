@@ -28,6 +28,14 @@ class TipoEntrega(str, Enum):
     RETIRO = "retiro"
 
 
+class OrigenPedido(str, Enum):
+    """De dónde salió un pedido/cierre de caja: la nube (flujo normal) o un
+    nodo de evento local, importado en bloque al cerrar caja allá."""
+
+    NUBE = "nube"
+    EVENTO_LOCAL = "evento_local"
+
+
 # Transiciones legales de estado de un Pedido. Cancelado solo es alcanzable
 # antes de que el pedido esté listo para servir; una vez listo/entregado/
 # cancelado el pedido es terminal respecto a la cancelación.

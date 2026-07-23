@@ -21,6 +21,12 @@ class GoogleUserInfo(BaseModel):
     nombre: str | None
 
 
+class GoogleAuthUnavailable(Exception):
+    """No se pudo contactar a Google (sin conectividad) — distinto de que el
+    token en sí sea inválido. Quien llama puede optar por degradar a invitado
+    en vez de rechazar el pedido completo."""
+
+
 async def verify_google_id_token(token: str) -> GoogleUserInfo:
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google sign-in no está configurado")
@@ -28,8 +34,15 @@ async def verify_google_id_token(token: str) -> GoogleUserInfo:
     try:
         # get_signing_key_from_jwt hace una llamada de red bloqueante en
         # cache-miss (rotación de claves) — se corre en un thread aparte
-        # para no trabar el event loop.
+        # para no trabar el event loop. Cualquier falla que no sea del propio
+        # token (red caída, DNS, timeout) se distingue como "no disponible".
         signing_key = await asyncio.to_thread(_jwks_client.get_signing_key_from_jwt, token)
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de Google inválido") from exc
+    except Exception as exc:
+        raise GoogleAuthUnavailable("No se pudo contactar a Google") from exc
+
+    try:
         payload = jwt.decode(
             token,
             signing_key.key,
@@ -38,10 +51,6 @@ async def verify_google_id_token(token: str) -> GoogleUserInfo:
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de Google inválido") from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="No se pudo verificar el token de Google"
-        ) from exc
 
     if payload.get("iss") not in _GOOGLE_ISSUERS:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de Google inválido")

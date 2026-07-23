@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
-from app.enums import EstadoPedido, MetodoPago
+from app.enums import EstadoPedido, MetodoPago, OrigenPedido
 
 
 class DatosFacturacion(BaseModel):
@@ -93,6 +93,7 @@ class PedidoOut(BaseModel):
     creado_en: datetime
     en_cocina_en: datetime | None
     listo_en: datetime | None
+    origen: OrigenPedido
     items: list[ItemPedidoOut]
 
 
@@ -133,5 +134,7 @@ class CierreCajaOut(BaseModel):
     cantidad_apple_pay: int
     total_general: Decimal
     cantidad_general: int
+    origen: OrigenPedido
+    sincronizado: bool
 
     model_config = {"from_attributes": True}

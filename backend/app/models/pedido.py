@@ -4,7 +4,7 @@ from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Numeric, String, fun
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.enums import EstadoPedido, MetodoPago, TipoEntrega
+from app.enums import EstadoPedido, MetodoPago, OrigenPedido, TipoEntrega
 
 
 class Pedido(Base):
@@ -34,6 +34,12 @@ class Pedido(Base):
     tilopay_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tipo_entrega: Mapped[TipoEntrega] = mapped_column(
         Enum(TipoEntrega, name="tipo_entrega", native_enum=True, values_callable=lambda obj: [e.value for e in obj])
+    )
+    # NUBE en el flujo normal; EVENTO_LOCAL para pedidos que llegaron como
+    # parte de un cierre de caja importado desde un nodo de evento.
+    origen: Mapped[OrigenPedido] = mapped_column(
+        Enum(OrigenPedido, name="origen_pedido", native_enum=True, values_callable=lambda obj: [e.value for e in obj]),
+        default=OrigenPedido.NUBE,
     )
 
     # Snapshot inmutable de los datos de facturación al momento del pedido

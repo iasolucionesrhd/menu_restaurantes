@@ -28,5 +28,10 @@ class Settings(BaseSettings):
 
     SEED_ADMIN_PASSWORD: str = "devpassword123"
 
+    # True solo en un nodo de evento local (ver scripts/importar_evento.py):
+    # habilita el script de importación y, más adelante, la sincronización de
+    # cierres de caja hacia la nube.
+    MODO_NODO_EVENTO: bool = False
+
 
 settings = Settings()
